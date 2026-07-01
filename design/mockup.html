@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>POS ขายตามงาน — Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Trirong:wght@500;600;700&family=Niramit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --black-diamond:#171719;
+    --odyssey:#364958;
+    --pewter:#89A6B8;
+    --milky:#E8FDFF;
+    --electrum:#E7CB9C;
+    --cacao:#745C4E;
+    --line:rgba(137,166,184,.16);
+    --line-strong:rgba(137,166,184,.28);
+    --surface:#1e2226;
+    --surface-2:#252b31;
+    /* category free-choice colors (demo of per-category custom colors) */
+    --cat-drink:#5FB0B7;
+    --cat-savory:#D98A45;
+    --cat-sweet:#D07AA4;
+    --cat-gift:#E7CB9C;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#0e0f10;
+    font-family:'Niramit','Inter',sans-serif;
+    color:var(--milky);
+    display:flex;justify-content:center;
+    padding:24px 12px;
+    min-height:100vh;
+  }
+  /* phone frame */
+  .phone{
+    width:390px;max-width:100%;
+    height:844px;max-height:calc(100vh - 48px);
+    background:var(--black-diamond);
+    border-radius:44px;
+    border:1px solid var(--line-strong);
+    box-shadow:0 40px 90px -30px rgba(0,0,0,.9), inset 0 0 0 8px #000;
+    overflow:hidden;position:relative;display:flex;flex-direction:column;
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:30px;background:#000;border-bottom-left-radius:18px;border-bottom-right-radius:18px;z-index:60}
+
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--black-diamond);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .3s}
+  .screen.hidden{transform:translateX(100%);opacity:0;pointer-events:none}
+
+  /* ---------- header ---------- */
+  .topbar{padding:38px 20px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#1b1e21,transparent)}
+  .brand{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .brand .kicker{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--electrum);font-family:'Inter';font-weight:600}
+  .event-pick{display:flex;align-items:center;gap:7px;cursor:pointer}
+  .event-pick h1{font-family:'Trirong','Playfair Display',serif;font-weight:600;font-size:18px;color:var(--milky);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .event-pick .date{font-size:11px;color:var(--pewter);font-weight:400}
+  .chev{color:var(--pewter);flex-shrink:0}
+  .icon-btn{width:42px;height:42px;flex-shrink:0;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--pewter);cursor:pointer;transition:.2s}
+  .icon-btn:hover{color:var(--electrum);border-color:var(--line-strong)}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:8px;padding:14px 20px 6px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--pewter);font-size:13px;font-weight:500;cursor:pointer;transition:.2s;white-space:nowrap}
+  .tab:hover{color:var(--milky)}
+  .tab.active{background:var(--electrum);color:#2a2115;border-color:var(--electrum);font-weight:600}
+
+  /* ---------- product scroll ---------- */
+  .catalog{flex:1;overflow-y:auto;padding:8px 16px 200px;scrollbar-width:thin}
+  .catalog::-webkit-scrollbar{width:0}
+  .cat-section{margin-top:18px}
+  .cat-head{display:flex;align-items:center;gap:10px;margin:0 4px 12px}
+  .cat-dot{width:9px;height:9px;border-radius:3px}
+  .cat-head h2{font-family:'Trirong',serif;font-size:15px;font-weight:600}
+  .cat-head .count{font-size:11px;color:var(--pewter);margin-left:auto;font-family:'Inter'}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .card{
+    position:relative;border-radius:18px;overflow:hidden;cursor:pointer;
+    background:var(--surface);border:1px solid var(--line);
+    border-top:3px solid var(--cat,var(--electrum));
+    transition:transform .18s ease, box-shadow .2s, border-color .2s;
+    display:flex;flex-direction:column;
+  }
+  .card:active{transform:scale(.96)}
+  .card:hover{box-shadow:0 10px 26px -12px rgba(0,0,0,.7)}
+  .card .thumb{aspect-ratio:1/1;width:100%;object-fit:cover;background:#20262b;display:block}
+  .card .meta{padding:9px 11px 11px;display:flex;flex-direction:column;gap:5px}
+  .card .name{font-size:13px;font-weight:500;line-height:1.3;color:var(--milky)}
+  .card .row{display:flex;align-items:baseline;justify-content:space-between;gap:6px}
+  .card .price{font-family:'Playfair Display',serif;font-weight:600;font-size:16px;color:var(--cat,var(--electrum))}
+  .card .price .cur{font-size:11px;opacity:.8;font-family:'Inter';margin-right:1px}
+  .stock{font-size:10px;font-family:'Inter';color:var(--pewter);padding:2px 7px;border-radius:999px;border:1px solid var(--line);background:rgba(0,0,0,.2)}
+  .stock.low{color:#E7A76C;border-color:rgba(231,167,108,.3)}
+  .stock.out{color:#c96b6b;border-color:rgba(201,107,107,.35)}
+  /* qty badge when in cart */
+  .qty-badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--electrum);color:#2a2115;font-family:'Inter';font-weight:700;font-size:12px;display:none;align-items:center;justify-content:center;box-shadow:0 4px 12px -2px rgba(0,0,0,.6)}
+  .card.in-cart .qty-badge{display:flex}
+  .card.sold-out{opacity:.45;pointer-events:none}
+  .sold-tag{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);color:#c96b6b;font-size:10px;font-weight:600;padding:3px 8px;border-radius:8px}
+
+  /* ---------- cart bar ---------- */
+  .cartbar{position:absolute;left:14px;right:14px;bottom:82px;z-index:45;background:linear-gradient(135deg,#2c363f,#232a30);border:1px solid var(--line-strong);border-radius:20px;padding:12px 12px 12px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 20px 45px -18px rgba(0,0,0,.9);transform:translateY(0);transition:.3s}
+  .cartbar.empty{transform:translateY(140%)}
+  .cart-info{display:flex;flex-direction:column;gap:1px}
+  .cart-info .c-items{font-size:11px;color:var(--pewter);font-family:'Inter'}
+  .cart-info .c-total{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--milky)}
+  .pay-btn{margin-left:auto;background:var(--electrum);color:#2a2115;border:none;border-radius:14px;padding:13px 20px;font-family:'Niramit';font-weight:600;font-size:15px;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.2s}
+  .pay-btn:hover{filter:brightness(1.06)}
+  .pay-btn:active{transform:scale(.97)}
+
+  /* ---------- checkout ---------- */
+  .co-head{padding:38px 20px 16px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line)}
+  .co-head .back{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--milky);cursor:pointer}
+  .co-head h2{font-family:'Trirong',serif;font-size:19px;font-weight:600}
+  .co-head .sub{font-size:11px;color:var(--pewter)}
+  .co-body{flex:1;overflow-y:auto;padding:16px 20px 20px}
+  .co-line{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .co-line img{width:46px;height:46px;border-radius:12px;object-fit:cover}
+  .co-line .nm{font-size:14px}
+  .co-line .qt{font-size:12px;color:var(--pewter);font-family:'Inter'}
+  .co-line .lp{margin-left:auto;font-family:'Playfair Display',serif;font-weight:600;font-size:15px}
+  .co-line .setbadge{font-size:10px;color:var(--electrum);border:1px solid rgba(231,203,156,.35);border-radius:6px;padding:1px 6px;margin-left:6px;font-family:'Inter'}
+
+  .summary{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .sum-row{display:flex;justify-content:space-between;font-size:13px;color:var(--pewter);margin-bottom:9px;font-family:'Inter'}
+  .sum-row.disc{color:var(--electrum)}
+  .sum-row .v{font-family:'Playfair Display',serif}
+  .sum-total{display:flex;justify-content:space-between;align-items:baseline;border-top:1px dashed var(--line-strong);padding-top:12px;margin-top:4px}
+  .sum-total .lbl{font-size:14px}
+  .sum-total .amt{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--milky)}
+  /* discount input control */
+  .disc-control{display:flex;align-items:center;gap:8px;margin:2px 0 12px}
+  .disc-control .lbl{font-size:13px;color:var(--electrum);font-family:'Niramit';font-weight:500}
+  .disc-field{margin-left:auto;display:flex;align-items:center;gap:0;border:1px solid var(--line-strong);border-radius:11px;overflow:hidden;background:rgba(0,0,0,.22)}
+  .disc-field input{width:74px;background:transparent;border:none;outline:none;color:var(--milky);font-family:'Playfair Display',serif;font-size:16px;font-weight:600;text-align:right;padding:8px 8px}
+  .disc-field input::placeholder{color:var(--pewter);font-weight:400}
+  .disc-toggle{display:flex}
+  .disc-toggle button{width:34px;height:37px;border:none;background:transparent;color:var(--pewter);font-family:'Inter';font-weight:600;font-size:13px;cursor:pointer;border-left:1px solid var(--line);transition:.15s}
+  .disc-toggle button.on{background:var(--electrum);color:#2a2115}
+
+  /* QR block */
+  .qr-wrap{margin-top:18px;background:linear-gradient(160deg,#2b343c,#20262c);border:1px solid var(--line-strong);border-radius:20px;padding:20px;text-align:center}
+  .qr-brand{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px}
+  .qr-brand .pp{font-family:'Inter';font-weight:700;font-size:13px;letter-spacing:.02em;color:var(--milky)}
+  .qr-brand .badge{font-size:9px;background:var(--electrum);color:#2a2115;font-weight:700;padding:2px 7px;border-radius:6px;font-family:'Inter'}
+  .qr-card{width:196px;height:196px;margin:0 auto;background:#fff;border-radius:16px;padding:14px;box-shadow:0 14px 34px -12px rgba(0,0,0,.6)}
+  .qr-card svg{width:100%;height:100%;display:block}
+  .qr-amt{margin-top:14px;font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--milky)}
+  .qr-hint{font-size:11px;color:var(--pewter);margin-top:4px}
+
+  .co-foot{padding:14px 20px calc(20px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--black-diamond);display:flex;gap:10px}
+  .btn-ghost{flex:0 0 auto;padding:15px 18px;border-radius:15px;border:1px solid var(--line-strong);background:transparent;color:var(--pewter);font-family:'Niramit';font-weight:500;font-size:15px;cursor:pointer}
+  .btn-paid{flex:1;border:none;border-radius:15px;background:linear-gradient(135deg,#EBD4A6,#D9B87C);color:#2a2115;font-family:'Niramit';font-weight:700;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 12px 28px -12px rgba(231,203,156,.5)}
+  .btn-paid:active{transform:scale(.98)}
+
+  /* toast */
+  .toast{position:absolute;top:80px;left:50%;transform:translate(-50%,-20px);background:var(--electrum);color:#2a2115;font-weight:600;font-size:13px;padding:10px 18px;border-radius:12px;z-index:80;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 10px 30px -8px rgba(0,0,0,.6)}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .success-check{position:absolute;inset:0;background:rgba(23,23,25,.94);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:90}
+  .success-check.show{display:flex}
+  .success-check .ring{width:96px;height:96px;border-radius:50%;border:2px solid var(--electrum);display:grid;place-items:center;color:var(--electrum)}
+  .success-check h3{font-family:'Trirong',serif;font-size:20px}
+  .success-check p{color:var(--pewter);font-size:13px}
+
+  .hint-caption{max-width:390px;color:#6b7178;font-size:12px;text-align:center;margin-top:16px;line-height:1.6;font-family:'Inter'}
+
+  /* ---------- bottom nav ---------- */
+  .bottomnav{position:absolute;left:0;right:0;bottom:0;height:68px;z-index:50;background:rgba(23,23,25,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding:7px 10px}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--pewter);cursor:pointer;font-family:'Niramit';font-size:11px;font-weight:500;transition:color .2s,transform .1s;border-radius:14px}
+  .nav-item svg{width:22px;height:22px}
+  .nav-item.active{color:var(--electrum)}
+  .nav-item:active{transform:scale(.92)}
+
+  /* ---------- history ---------- */
+  .co-head .export{margin-left:auto;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--pewter);cursor:pointer;transition:.2s}
+  .co-head .export:hover{color:var(--electrum);border-color:var(--line-strong)}
+  .hist-body{flex:1;overflow-y:auto;padding:16px 20px 90px}
+  .hf-select{position:relative;margin-bottom:16px}
+  .hf-select select{width:100%;appearance:none;-webkit-appearance:none;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 42px 13px 15px;color:var(--milky);font-family:'Niramit';font-size:15px;font-weight:500;cursor:pointer;outline:none;transition:.2s}
+  .hf-select select:focus{border-color:var(--electrum)}
+  .hf-select select option{background:#1e2226;color:var(--milky)}
+  .hf-select .arrow{position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--pewter)}
+  .hist-summary{display:flex;gap:12px}
+  .hs-card{flex:1;background:linear-gradient(150deg,#2c363f,#232a30);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .hs-card .k{font-size:11px;color:var(--pewter);font-family:'Niramit'}
+  .hs-card .v{font-family:'Playfair Display',serif;font-weight:600;font-size:23px;margin-top:4px;color:var(--milky)}
+  .hs-card.gold .v{color:var(--electrum)}
+  .hs-card .v small{font-size:12px;color:var(--pewter);font-family:'Niramit'}
+  .hist-day{font-size:12px;color:var(--pewter);margin:20px 4px 12px;font-family:'Niramit';display:flex;align-items:center;gap:10px}
+  .hist-day::after{content:'';flex:1;height:1px;background:var(--line)}
+  .sale{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:.2s}
+  .sale:hover{border-color:var(--line-strong)}
+  .sale:active{transform:scale(.99)}
+  .sale .time{font-family:'Playfair Display',serif;font-weight:600;font-size:15px;color:var(--milky);width:50px;flex-shrink:0}
+  .sale .desc{min-width:0}
+  .sale .desc .it{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+  .sale .desc .mt{font-size:11px;color:var(--pewter);font-family:'Niramit';margin-top:2px}
+  .sale .amt{margin-left:auto;text-align:right;flex-shrink:0}
+  .sale .amt .t{font-family:'Playfair Display',serif;font-weight:600;font-size:16px;color:var(--electrum)}
+  .sale .amt .st{font-size:10px;color:#82C08C;font-family:'Niramit';display:flex;align-items:center;gap:3px;justify-content:flex-end;margin-top:2px}
+
+  /* ---------- settings ---------- */
+  .set-body{flex:1;overflow-y:auto;padding:18px 20px 90px}
+  .set-group{margin-bottom:22px}
+  .set-group>.gt{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--pewter);font-family:'Inter';font-weight:600;margin:0 4px 10px}
+  .set-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .set-row{display:flex;align-items:center;gap:13px;padding:14px 15px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
+  .set-row:last-child{border-bottom:none}
+  .set-row:hover{background:var(--surface-2)}
+  .set-ic{width:34px;height:34px;border-radius:10px;background:rgba(231,203,156,.1);display:grid;place-items:center;color:var(--electrum);flex-shrink:0}
+  .set-row .lab{font-size:14px;min-width:0}
+  .set-row .lab small{display:block;color:var(--pewter);font-size:11px;font-family:'Niramit';margin-top:1px}
+  .set-row .val{margin-left:auto;color:var(--pewter);font-size:13px;font-family:'Inter';display:flex;align-items:center;gap:6px;flex-shrink:0}
+  .set-input{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 11px;color:var(--milky);font-family:'Niramit';font-size:13px;text-align:right;width:140px;outline:none;margin-left:auto}
+  .set-input:focus{border-color:var(--electrum)}
+  .swatch-row{display:flex;gap:6px;margin-left:auto}
+  .swatch{width:22px;height:22px;border-radius:7px;border:1px solid rgba(255,255,255,.18)}
+  .set-row.danger .set-ic{background:rgba(201,107,107,.12);color:#c96b6b}
+
+  /* ---------- product manage ---------- */
+  .prod-body{flex:1;overflow-y:auto;padding:14px 20px 90px}
+  .prod{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px;transition:box-shadow .15s,opacity .12s,border-color .15s}
+  .prod.dragging{opacity:.6;box-shadow:0 16px 34px -12px rgba(0,0,0,.75);border-color:var(--electrum)}
+  .prod:hover{border-color:var(--line-strong)}
+  .prod img{width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0}
+  .prod .pmeta{flex:1;min-width:0}
+  .prod .pn{font-size:14px;display:flex;align-items:center;gap:6px}
+  .prod .psub{font-size:11px;color:var(--pewter);margin-top:2px;font-family:'Niramit'}
+  .prod .psub .pr{font-family:'Playfair Display',serif;color:var(--electrum)}
+  .offtag{font-size:10px;font-family:'Niramit';color:#E0B579;background:rgba(224,181,121,.14);padding:1px 7px;border-radius:6px}
+  .prod:not(.off) .offtag{display:none}
+  .switch{position:relative;display:inline-block;width:42px;height:24px;flex-shrink:0;cursor:pointer}
+  .switch input{opacity:0;width:0;height:0}
+  .switch .slider{position:absolute;inset:0;background:#3a4148;border:1px solid var(--line);border-radius:999px;transition:.2s}
+  .switch .slider::before{content:'';position:absolute;width:18px;height:18px;left:2px;top:2px;background:var(--pewter);border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:var(--electrum);border-color:var(--electrum)}
+  .switch input:checked + .slider::before{transform:translateX(18px);background:#2a2115}
+  .add-fab{margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--electrum);color:#2a2115;border:none;border-radius:12px;padding:9px 14px;font-family:'Niramit';font-weight:600;font-size:13px;cursor:pointer}
+  .phead{display:flex;align-items:center;gap:8px;margin:18px 4px 10px;font-family:'Trirong',serif;font-weight:600;font-size:14px;color:var(--milky)}
+  .phead:first-child{margin-top:2px}
+  .phead .cat-dot{width:9px;height:9px;border-radius:3px}
+  .phead .pcount{margin-left:auto;font-size:11px;color:var(--pewter);font-family:'Niramit';font-weight:400}
+  .pgroup{min-height:6px}
+
+  /* ---------- add product form ---------- */
+  .form-body{flex:1;overflow-y:auto;padding:18px 20px 20px}
+  .field{margin-bottom:18px}
+  .field>label{display:block;font-size:12px;color:var(--pewter);font-family:'Niramit';margin:0 2px 8px;font-weight:500}
+  .input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;color:var(--milky);font-family:'Niramit';font-size:15px;outline:none;transition:.2s}
+  .input:focus{border-color:var(--electrum)}
+  .money{display:flex;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:0 14px;transition:.2s}
+  .money:focus-within{border-color:var(--electrum)}
+  .money .cur{color:var(--electrum);font-family:'Playfair Display',serif;font-size:18px;font-weight:600}
+  .money input{flex:1;background:transparent;border:none;outline:none;color:var(--milky);font-family:'Playfair Display',serif;font-size:18px;font-weight:600;padding:13px 8px}
+  .photo-pick{width:100%;aspect-ratio:16/10;border:1.5px dashed var(--line-strong);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--pewter);cursor:pointer;background:var(--surface);transition:.2s}
+  .photo-pick:hover{border-color:var(--electrum);color:var(--electrum)}
+  .photo-pick span{font-size:13px;font-family:'Niramit'}
+  .stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:13px;overflow:hidden;width:fit-content}
+  .stepper button{width:48px;height:48px;background:var(--surface);border:none;color:var(--electrum);font-size:22px;cursor:pointer;transition:.15s}
+  .stepper button:hover{background:var(--surface-2)}
+  .stepper input{width:70px;height:48px;text-align:center;background:var(--surface-2);border:none;color:var(--milky);font-family:'Playfair Display',serif;font-size:18px;font-weight:600;outline:none}
+  .cat-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .cat-chip{padding:9px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--pewter);font-size:13px;font-family:'Niramit';cursor:pointer;display:flex;align-items:center;gap:7px;transition:.2s}
+  .cat-chip .cdot{width:9px;height:9px;border-radius:3px}
+  .cat-chip.sel{border-color:var(--electrum);color:var(--milky);background:var(--surface-2)}
+  .cat-chip.new{border-style:dashed;color:var(--electrum)}
+  .newcat{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:none}
+  .newcat.show{display:block}
+  .color-row{display:flex;gap:10px;margin-top:12px}
+  .color-item{flex:1;text-align:center}
+  .color-item label{font-size:11px;color:var(--pewter);display:block;margin-bottom:6px;font-family:'Niramit'}
+  .color-item input[type=color]{width:100%;height:42px;border:1px solid var(--line);border-radius:10px;background:transparent;cursor:pointer;padding:3px}
+  .cat-preview{margin-top:14px;border-radius:12px;padding:14px;text-align:center;font-weight:600;font-family:'Niramit';border:2px solid #E7CB9C;background:#364958;color:#E8FDFF}
+
+  /* ---------- category manage (reorder) ---------- */
+  .cat-body{flex:1;overflow-y:auto;padding:14px 20px 90px}
+  .cat-hint{font-size:12px;color:var(--pewter);font-family:'Niramit';margin:0 2px 14px;display:flex;align-items:center;gap:8px;line-height:1.5}
+  .cat-hint svg{flex-shrink:0;color:var(--electrum)}
+  .catrow{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:10px;transition:box-shadow .15s,opacity .12s,border-color .15s}
+  .catrow.dragging{opacity:.6;box-shadow:0 16px 34px -12px rgba(0,0,0,.75);border-color:var(--electrum)}
+  .grip{width:28px;height:42px;display:grid;place-items:center;color:var(--pewter);cursor:grab;touch-action:none;flex-shrink:0}
+  .grip:active{cursor:grabbing;color:var(--electrum)}
+  .cchip{padding:9px 14px;border-radius:11px;border:2px solid;font-family:'Niramit';font-weight:600;font-size:14px;white-space:nowrap}
+  .ccount{margin-left:auto;font-size:11px;color:var(--pewter);font-family:'Niramit';flex-shrink:0}
+  .cedit{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;color:var(--pewter);cursor:pointer;flex-shrink:0;transition:.2s}
+  .cedit:hover{color:var(--electrum);border-color:var(--line-strong)}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+
+  <!-- ============ POS SCREEN ============ -->
+  <section class="screen" id="posScreen">
+    <div class="topbar">
+      <div class="brand">
+        <span class="kicker">งานที่กำลังขาย</span>
+        <div class="event-pick" onclick="toast('เลือกงาน / วันที่')">
+          <h1>ตลาดนัดรถไฟ</h1>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <span class="date">1 ก.ค. 2569 · เปิดร้าน 14:20 น.</span>
+      </div>
+      <div class="icon-btn" onclick="showScreen('history')" title="สรุปยอด">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 19V5m5 14V9m5 10V3m5 16v-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div class="icon-btn" onclick="showScreen('settings')" title="ตั้งค่า">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 004 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 002.9 14H3a2 2 0 010-4h.1A1.6 1.6 0 004.6 7.3l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 0010 4.1V4a2 2 0 014 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 00-.3 1.8" stroke="currentColor" stroke-width="1.6"/></svg>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    <div class="catalog" id="catalog"></div>
+
+    <div class="cartbar empty" id="cartbar">
+      <div class="cart-info">
+        <span class="c-items" id="cItems">0 รายการ</span>
+        <span class="c-total" id="cTotal">฿0</span>
+      </div>
+      <button class="pay-btn" onclick="goCheckout()">
+        ชำระเงิน
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 12h14m-6-6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </section>
+
+  <!-- ============ CHECKOUT SCREEN ============ -->
+  <section class="screen hidden" id="checkoutScreen">
+    <div class="co-head">
+      <div class="back" onclick="backToPos()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h2>ชำระเงิน</h2>
+        <div class="sub">ตลาดนัดรถไฟ · 1 ก.ค. 2569</div>
+      </div>
+    </div>
+
+    <div class="co-body" id="coBody"></div>
+
+    <div class="co-foot">
+      <button class="btn-ghost" onclick="backToPos()">ยกเลิก</button>
+      <button class="btn-paid" onclick="markPaid()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จ่ายแล้ว
+      </button>
+    </div>
+
+    <div class="success-check" id="successCheck">
+      <div class="ring">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3>บันทึกการขายแล้ว</h3>
+      <p>ตัดสต็อกอัตโนมัติ · เก็บเวลา 14:37 น.</p>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY SCREEN ============ -->
+  <section class="screen hidden" id="historyScreen">
+    <div class="co-head">
+      <div>
+        <h2>ประวัติการขาย</h2>
+        <div class="sub">เลือกงานที่ต้องการดู</div>
+      </div>
+      <div class="export" onclick="toast('ส่งออกเป็นไฟล์ CSV / Excel')" title="ส่งออก">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="hist-body" id="histBody"></div>
+  </section>
+
+  <!-- ============ SETTINGS SCREEN ============ -->
+  <section class="screen hidden" id="settingsScreen">
+    <div class="co-head">
+      <div>
+        <h2>ตั้งค่า</h2>
+        <div class="sub">ร้านขนมพี่หมี</div>
+      </div>
+    </div>
+    <div class="set-body">
+
+      <div class="set-group">
+        <div class="gt">ร้าน & การรับเงิน</div>
+        <div class="set-card">
+          <div class="set-row">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 9l1-5h16l1 5M4 9h16v10a1 1 0 01-1 1H5a1 1 0 01-1-1V9zm5 4h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="lab">ชื่อร้าน</div>
+            <input class="set-input" value="ร้านขนมพี่หมี" />
+          </div>
+          <div class="set-row">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M8 8h3v3H8zM8 13h3v3H8zM13 8h3v8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+            <div class="lab">พร้อมเพย์ <small>ไว้สร้าง QR รับเงิน</small></div>
+            <input class="set-input" value="088-xxx-4521" />
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="gt">งาน & สินค้า</div>
+        <div class="set-card">
+          <div class="set-row" onclick="toast('จัดการงาน + วันที่')">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="lab">งานที่จะออก <small>เลือกงาน + วันที่</small></div>
+            <div class="val">ตลาดนัดรถไฟ<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="set-row" onclick="showScreen('products')">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></div>
+            <div class="lab">สินค้า <small>12 รายการ</small></div>
+            <div class="val">จัดการ<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="set-row" onclick="showScreen('categories')">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 3a9 9 0 000 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h1a3 3 0 003-3c0-4-3-6-7-6z" stroke="currentColor" stroke-width="1.6"/></svg></div>
+            <div class="lab">ประเภท & สี</div>
+            <div class="swatch-row">
+              <span class="swatch" style="background:#5FB0B7"></span>
+              <span class="swatch" style="background:#D98A45"></span>
+              <span class="swatch" style="background:#D07AA4"></span>
+              <span class="swatch" style="background:#E7CB9C"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <div class="gt">ข้อมูล</div>
+        <div class="set-card">
+          <div class="set-row" onclick="toast('นำเข้าสินค้าจากไฟล์')">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="lab">นำเข้าข้อมูลสินค้า</div>
+            <div class="val"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+          <div class="set-row" onclick="toast('สำรองข้อมูลทั้งเครื่อง')">
+            <div class="set-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="6" rx="8" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" stroke="currentColor" stroke-width="1.8"/></svg></div>
+            <div class="lab">สำรอง / กู้คืนข้อมูล <small>อัปเดตล่าสุด วันนี้ 14:00</small></div>
+            <div class="val"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ PRODUCT LIST SCREEN ============ -->
+  <section class="screen hidden" id="productsScreen">
+    <div class="co-head">
+      <div class="back" onclick="showScreen('settings')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h2>จัดการสินค้า</h2>
+        <div class="sub">ทั้งหมด 12 รายการ</div>
+      </div>
+      <button class="add-fab" onclick="showScreen('addProduct')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        เพิ่ม
+      </button>
+    </div>
+    <div class="prod-body" id="prodBody"></div>
+  </section>
+
+  <!-- ============ ADD PRODUCT SCREEN ============ -->
+  <section class="screen hidden" id="addProductScreen">
+    <div class="co-head">
+      <div class="back" onclick="showScreen('products')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h2>เพิ่มสินค้า</h2>
+        <div class="sub">กรอกข้อมูลสินค้าใหม่</div>
+      </div>
+    </div>
+
+    <div class="form-body">
+      <div class="field">
+        <label>รูปสินค้า</label>
+        <div class="photo-pick" onclick="toast('เปิดกล้อง / เลือกจากแกลเลอรี')">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13" r="3.2" stroke="currentColor" stroke-width="1.6"/></svg>
+          <span>แตะเพื่อถ่ายรูป / เลือกรูป</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>ชื่อสินค้า</label>
+        <input class="input" placeholder="เช่น ชาไทยเย็น" />
+      </div>
+
+      <div class="field">
+        <label>ราคาขาย</label>
+        <div class="money"><span class="cur">฿</span><input inputmode="numeric" placeholder="0" oninput="numOnly(this)" /></div>
+      </div>
+
+      <div class="field">
+        <label>สต็อกเริ่มต้น</label>
+        <div class="stepper">
+          <button onclick="stepStock(-1)">−</button>
+          <input id="stockVal" value="20" inputmode="numeric" oninput="numOnly(this)" />
+          <button onclick="stepStock(1)">＋</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>ประเภท</label>
+        <div class="cat-chips">
+          <div class="cat-chip sel" onclick="selChip(this)"><span class="cdot" style="background:#5FB0B7"></span>เครื่องดื่ม</div>
+          <div class="cat-chip" onclick="selChip(this)"><span class="cdot" style="background:#D98A45"></span>ของคาว</div>
+          <div class="cat-chip" onclick="selChip(this)"><span class="cdot" style="background:#D07AA4"></span>ของหวาน</div>
+          <div class="cat-chip" onclick="selChip(this)"><span class="cdot" style="background:#E7CB9C"></span>ของฝาก</div>
+          <div class="cat-chip new" onclick="toggleNewCat()">＋ ประเภทใหม่</div>
+        </div>
+
+        <div class="newcat" id="newcat">
+          <input class="input" placeholder="ชื่อประเภทใหม่" oninput="document.getElementById('catPrev').textContent=this.value||'ตัวอย่างประเภท'" />
+          <div class="color-row">
+            <div class="color-item"><label>สีพื้น</label><input type="color" id="ccBg" value="#364958" oninput="updateCatPreview()" /></div>
+            <div class="color-item"><label>สีข้อความ</label><input type="color" id="ccText" value="#E8FDFF" oninput="updateCatPreview()" /></div>
+            <div class="color-item"><label>สีกรอบ</label><input type="color" id="ccBorder" value="#E7CB9C" oninput="updateCatPreview()" /></div>
+          </div>
+          <div class="cat-preview" id="catPrev">ตัวอย่างประเภท</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="co-foot">
+      <button class="btn-ghost" onclick="showScreen('products')">ยกเลิก</button>
+      <button class="btn-paid" onclick="saveProduct()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        บันทึกสินค้า
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ CATEGORY MANAGE SCREEN ============ -->
+  <section class="screen hidden" id="categoriesScreen">
+    <div class="co-head">
+      <div class="back" onclick="showScreen('settings')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h2>ประเภทสินค้า</h2>
+        <div class="sub">ลากจัดลำดับได้</div>
+      </div>
+      <button class="add-fab" onclick="toast('เพิ่มประเภทใหม่ + เลือกสี')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+        เพิ่ม
+      </button>
+    </div>
+    <div class="cat-body">
+      <div class="cat-hint">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M8 6h8M8 12h8M8 18h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        ลากที่จับ ⣿ เพื่อจัดลำดับ — ลำดับนี้จะเรียงเหมือนกันในหน้าขาย
+      </div>
+      <div id="catList"></div>
+    </div>
+  </section>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <nav class="bottomnav" id="bottomnav">
+    <div class="nav-item active" data-s="pos" onclick="showScreen('pos')">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.9"/></svg>
+      ขายของ
+    </div>
+    <div class="nav-item" data-s="history" onclick="showScreen('history')">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.9"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ประวัติ
+    </div>
+    <div class="nav-item" data-s="settings" onclick="showScreen('settings')">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="currentColor" stroke-width="1.9"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8 2 2 0 11-2.8 2.8 1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0 1.6 1.6 0 00-2.9-1.4 2 2 0 11-2.8-2.8A1.6 1.6 0 003 14H3a2 2 0 010-4 1.6 1.6 0 001.5-2.6 2 2 0 112.8-2.8A1.6 1.6 0 0010 4.1V4a2 2 0 014 0 1.6 1.6 0 002.7 1.1 2 2 0 112.8 2.8A1.6 1.6 0 0021 12h.1a2 2 0 010 4h-.1" stroke="currentColor" stroke-width="1.5"/></svg>
+      ตั้งค่า
+    </div>
+  </nav>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const categories = [
+  { id:'drink',  name:'เครื่องดื่ม', color:'#5FB0B7', bg:'#234b52', text:'#CFF0F3', border:'#5FB0B7' },
+  { id:'savory', name:'ของคาว',     color:'#D98A45', bg:'#4a3320', text:'#FBE6D2', border:'#D98A45' },
+  { id:'sweet',  name:'ของหวาน',    color:'#D07AA4', bg:'#45283a', text:'#FBDCEC', border:'#D07AA4' },
+  { id:'gift',   name:'ของฝาก',     color:'#E7CB9C', bg:'#3d3527', text:'#F7ECD8', border:'#E7CB9C' },
+];
+const products = [
+  { id:1, cat:'drink',  name:'ชาไทยเย็น',        price:45, stock:23, img:'https://picsum.photos/seed/thaitea/300' },
+  { id:2, cat:'drink',  name:'อเมริกาโน่',        price:50, stock:8,  img:'https://picsum.photos/seed/ameri/300' },
+  { id:3, cat:'drink',  name:'มะนาวโซดา',        price:40, stock:2,  img:'https://picsum.photos/seed/soda/300' },
+  { id:4, cat:'drink',  name:'นมสดคาราเมล',      price:55, stock:15, img:'https://picsum.photos/seed/milk/300' },
+  { id:5, cat:'savory', name:'ไก่ทอดกรอบ',       price:69, stock:12, img:'https://picsum.photos/seed/chick/300' },
+  { id:6, cat:'savory', name:'ปั้นสิบไส้ปู',      price:35, stock:0,  img:'https://picsum.photos/seed/pun/300' },
+  { id:7, cat:'savory', name:'ลูกชิ้นปิ้ง',        price:20, stock:40, img:'https://picsum.photos/seed/ball/300' },
+  { id:8, cat:'sweet',  name:'ครัวซองต์',         price:60, stock:9,  img:'https://picsum.photos/seed/crois/300' },
+  { id:9, cat:'sweet',  name:'บิงซูสตรอว์',       price:120,stock:6,  img:'https://picsum.photos/seed/bingsu/300' },
+  { id:10,cat:'sweet',  name:'โดนัทเคลือบ',       price:30, stock:18, img:'https://picsum.photos/seed/donut/300' },
+  { id:11,cat:'gift',   name:'คุกกี้กล่องของขวัญ', price:180,stock:5,  img:'https://picsum.photos/seed/cookie/300' },
+  { id:12,cat:'gift',   name:'แยมโฮมเมด',         price:150,stock:7,  img:'https://picsum.photos/seed/jam/300' },
+];
+const cart = {}; // id -> qty
+products.forEach(p=>p.active = true);
+products[3].active = false; // เดโม: นมสดคาราเมล ไม่ได้เอามาขายงานนี้
+
+/* ---------- render POS (tabs + catalog) ---------- */
+const tabsEl = document.getElementById('tabs');
+const catalog = document.getElementById('catalog');
+function buildPOS(){
+  const onSale = p => p.active !== false;
+  const visCats = categories.filter(c=>products.some(p=>p.cat===c.id && onSale(p)));
+  tabsEl.innerHTML = `<div class="tab active" data-t="all" onclick="scrollTo('all',this)">ทั้งหมด</div>` +
+    visCats.map(c=>`<div class="tab" data-t="${c.id}" onclick="scrollToCat('${c.id}',this)">${c.name}</div>`).join('');
+  catalog.innerHTML = visCats.map(c=>{
+    const items = products.filter(p=>p.cat===c.id && onSale(p));
+    return `<div class="cat-section" id="sec-${c.id}">
+      <div class="cat-head">
+        <span class="cat-dot" style="background:${c.color}"></span>
+        <h2 style="color:${c.color}">${c.name}</h2>
+        <span class="count">${items.length} รายการ</span>
+      </div>
+      <div class="grid">
+        ${items.map(p=>cardHTML(p,c.color)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  // re-apply cart state after rebuild
+  Object.entries(cart).forEach(([id,q])=>{
+    const card = document.getElementById('card-'+id);
+    if(card){ card.classList.add('in-cart'); document.getElementById('qb-'+id).textContent = q; }
+  });
+}
+buildPOS();
+
+function cardHTML(p,color){
+  const out = p.stock===0;
+  const low = p.stock>0 && p.stock<=3;
+  const stockCls = out?'out':(low?'low':'');
+  const stockTxt = out?'ของหมด':(low?`เหลือ ${p.stock}`:`คงเหลือ ${p.stock}`);
+  return `<div class="card ${out?'sold-out':''}" id="card-${p.id}" style="--cat:${color}" onclick="addToCart(${p.id})">
+    <div class="qty-badge" id="qb-${p.id}">0</div>
+    ${out?'<span class="sold-tag">หมด</span>':''}
+    <img class="thumb" src="${p.img}" alt="${p.name}" loading="lazy" />
+    <div class="meta">
+      <div class="name">${p.name}</div>
+      <div class="row">
+        <div class="price"><span class="cur">฿</span>${p.price}</div>
+        <span class="stock ${stockCls}">${stockTxt}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- cart logic ---------- */
+function addToCart(id){
+  cart[id] = (cart[id]||0)+1;
+  const card = document.getElementById('card-'+id);
+  card.classList.add('in-cart');
+  const qb = document.getElementById('qb-'+id);
+  qb.textContent = cart[id];
+  qb.animate([{transform:'scale(1.4)'},{transform:'scale(1)'}],{duration:180});
+  updateCartBar();
+}
+function cartCount(){ return Object.values(cart).reduce((a,b)=>a+b,0); }
+function cartTotal(){ return Object.entries(cart).reduce((s,[id,q])=>s+q*products.find(p=>p.id==id).price,0); }
+function updateCartBar(){
+  const n = cartCount();
+  const bar = document.getElementById('cartbar');
+  bar.classList.toggle('empty', n===0);
+  document.getElementById('cItems').textContent = n+' รายการ';
+  document.getElementById('cTotal').textContent = '฿'+cartTotal().toLocaleString();
+}
+
+/* ---------- tab scroll ---------- */
+function scrollToCat(id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('sec-'+id).scrollIntoView({behavior:'smooth',block:'start'});
+}
+function scrollTo(_,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  catalog.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- screen navigation ---------- */
+function showScreen(name){
+  ['pos','checkout','history','settings','products','addProduct','categories'].forEach(s=>
+    document.getElementById(s+'Screen').classList.toggle('hidden', s!==name));
+  const isMain = ['pos','history','settings'].includes(name);
+  document.getElementById('bottomnav').style.display = isMain ? 'flex' : 'none';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active', n.dataset.s===name));
+  if(name==='history') renderHistory();
+  if(name==='products') renderProducts();
+  if(name==='categories') renderCategories();
+}
+
+/* ---------- category manage + reorder ---------- */
+function catCount(id){ return products.filter(p=>p.cat===id).length; }
+function renderCategories(){
+  document.getElementById('catList').innerHTML = categories.map(c=>`
+    <div class="catrow" data-id="${c.id}">
+      <div class="grip" onpointerdown="catDragStart(event)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/></svg>
+      </div>
+      <div class="cchip" style="background:${c.bg};color:${c.text};border-color:${c.border}">${c.name}</div>
+      <span class="ccount">${catCount(c.id)} สินค้า</span>
+      <div class="cedit" onclick="toast('แก้ไขชื่อ + สี ${c.name}')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 00-3-3L5 17v3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+      </div>
+    </div>`).join('');
+}
+
+let dragRow = null;
+function catDragStart(e){
+  dragRow = e.currentTarget.closest('.catrow');
+  dragRow.classList.add('dragging');
+  document.addEventListener('pointermove', catDragMove);
+  document.addEventListener('pointerup', catDragEnd, { once:true });
+  e.preventDefault();
+}
+function catDragMove(e){
+  const list = document.getElementById('catList');
+  const after = dragAfterElement(list, e.clientY, '.catrow');
+  if(after == null) list.appendChild(dragRow);
+  else list.insertBefore(dragRow, after);
+}
+function dragAfterElement(container, y, sel){
+  const els = [...container.querySelectorAll(sel+':not(.dragging)')];
+  return els.reduce((closest, child)=>{
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    if(offset < 0 && offset > closest.offset) return { offset, element:child };
+    return closest;
+  }, { offset:-Infinity }).element;
+}
+function catDragEnd(){
+  document.removeEventListener('pointermove', catDragMove);
+  if(!dragRow) return;
+  dragRow.classList.remove('dragging');
+  const order = [...document.querySelectorAll('#catList .catrow')].map(r=>r.dataset.id);
+  categories.sort((a,b)=>order.indexOf(a.id) - order.indexOf(b.id));
+  buildPOS();          // หน้าขายเรียงตามลำดับใหม่
+  dragRow = null;
+  toast('บันทึกลำดับแล้ว');
+}
+
+/* ---------- product manage / add ---------- */
+function renderProducts(){
+  document.getElementById('prodBody').innerHTML = categories.map(c=>{
+    const items = products.filter(p=>p.cat===c.id);
+    return `<div class="phead"><span class="cat-dot" style="background:${c.color}"></span>${c.name}<span class="pcount">${items.length} รายการ</span></div>
+      <div class="pgroup" data-cat="${c.id}">
+        ${items.map(p=>prodRowHTML(p,c)).join('')}
+      </div>`;
+  }).join('');
+}
+function prodRowHTML(p,c){
+  const out = p.stock===0;
+  const off = p.active===false;
+  return `<div class="prod ${off?'off':''}" data-id="${p.id}">
+    <div class="grip" onpointerdown="prodDragStart(event)">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/></svg>
+    </div>
+    <img src="${p.img}" alt="${p.name}"/>
+    <div class="pmeta">
+      <div class="pn">${p.name}<span class="offtag">ปิดขาย</span></div>
+      <div class="psub">฿${p.price} · ${out?'<span style="color:#c96b6b">ของหมด</span>':'คงเหลือ '+p.stock}</div>
+    </div>
+    <label class="switch" title="เปิด/ปิดขาย">
+      <input type="checkbox" ${off?'':'checked'} onchange="toggleSell(${p.id},this)" />
+      <span class="slider"></span>
+    </label>
+    <div class="cedit" onclick="showScreen('addProduct')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 00-3-3L5 17v3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+    </div>
+  </div>`;
+}
+function toggleSell(id, el){
+  const p = products.find(x=>x.id===id);
+  p.active = el.checked;
+  el.closest('.prod').classList.toggle('off', !el.checked);
+  buildPOS();
+  toast(el.checked ? 'เปิดขายแล้ว' : 'ปิดขาย · ซ่อนจากหน้าขาย');
+}
+
+/* product reorder (within its category group) */
+let pDragRow=null, pDragBox=null;
+function prodDragStart(e){
+  pDragRow = e.currentTarget.closest('.prod');
+  pDragBox = pDragRow.parentElement;   // the .pgroup of its category
+  pDragRow.classList.add('dragging');
+  document.addEventListener('pointermove', prodDragMove);
+  document.addEventListener('pointerup', prodDragEnd, { once:true });
+  e.preventDefault();
+}
+function prodDragMove(e){
+  const after = dragAfterElement(pDragBox, e.clientY, '.prod');
+  if(after == null) pDragBox.appendChild(pDragRow);
+  else pDragBox.insertBefore(pDragRow, after);
+}
+function prodDragEnd(){
+  document.removeEventListener('pointermove', prodDragMove);
+  if(!pDragRow) return;
+  pDragRow.classList.remove('dragging');
+  const order = [...document.querySelectorAll('#prodBody .prod')].map(r=>+r.dataset.id);
+  products.sort((a,b)=>order.indexOf(a.id) - order.indexOf(b.id));
+  buildPOS();          // หน้าขายเรียงตามตำแหน่งใหม่
+  pDragRow = null;
+  toast('บันทึกตำแหน่งสินค้าแล้ว');
+}
+function stepStock(d){
+  const el = document.getElementById('stockVal');
+  el.value = Math.max(0, (parseInt(el.value)||0)+d);
+}
+function selChip(el){
+  document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('newcat').classList.remove('show');
+}
+function toggleNewCat(){
+  document.querySelectorAll('.cat-chip').forEach(c=>c.classList.remove('sel'));
+  document.getElementById('newcat').classList.toggle('show');
+}
+function updateCatPreview(){
+  const p = document.getElementById('catPrev');
+  p.style.background = document.getElementById('ccBg').value;
+  p.style.color = document.getElementById('ccText').value;
+  p.style.borderColor = document.getElementById('ccBorder').value;
+}
+function saveProduct(){
+  toast('บันทึกสินค้าแล้ว (ตัวอย่าง)');
+  showScreen('products');
+}
+
+/* ---------- checkout ---------- */
+function goCheckout(){
+  if(cartCount()===0){ toast('ยังไม่มีสินค้าในตะกร้า'); return; }
+  renderCheckout();
+  showScreen('checkout');
+}
+function backToPos(){
+  document.getElementById('successCheck').classList.remove('show');
+  showScreen('pos');
+}
+function renderCheckout(){
+  const lines = Object.entries(cart).map(([id,q])=>{
+    const p = products.find(x=>x.id==id);
+    return `<div class="co-line">
+      <img src="${p.img}" alt="${p.name}"/>
+      <div>
+        <div class="nm">${p.name}</div>
+        <div class="qt">฿${p.price} × ${q}</div>
+      </div>
+      <div class="lp">฿${(p.price*q).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+  discMode = 'baht';
+  document.getElementById('coBody').innerHTML = lines + `
+    <div class="summary">
+      <div class="sum-row"><span>ยอดรวม</span><span class="v" id="sumSub">฿0</span></div>
+      <div class="disc-control">
+        <span class="lbl">ส่วนลดท้ายบิล</span>
+        <div class="disc-field">
+          <input id="discInput" inputmode="numeric" placeholder="0" oninput="numOnly(this);recalc()" />
+          <div class="disc-toggle">
+            <button id="mBaht" class="on" onclick="setMode('baht')">฿</button>
+            <button id="mPct" onclick="setMode('percent')">%</button>
+          </div>
+        </div>
+      </div>
+      <div class="sum-row disc" id="discRow" style="display:none"><span>ลดไป</span><span class="v" id="sumDisc">− ฿0</span></div>
+      <div class="sum-total"><span class="lbl">ยอดสุทธิ</span><span class="amt" id="sumTotal">฿0</span></div>
+    </div>
+    <div class="qr-wrap">
+      <div class="qr-brand"><span class="pp">PromptPay</span><span class="badge">พร้อมเพย์</span></div>
+      <div class="qr-card" id="qrCard"></div>
+      <div class="qr-amt" id="qrAmt">฿0</div>
+      <div class="qr-hint">ให้ลูกค้าสแกนจ่าย · เงินเข้าบัญชี 088-xxx-4521</div>
+    </div>`;
+  recalc();
+}
+let discMode = 'baht';
+function discountAmount(){
+  const sub = cartTotal();
+  let v = parseFloat(document.getElementById('discInput').value) || 0;
+  if(v < 0) v = 0;
+  let d = discMode==='percent' ? sub*Math.min(v,100)/100 : Math.min(v,sub);
+  return Math.round(d);
+}
+function setMode(m){
+  discMode = m;
+  document.getElementById('mBaht').classList.toggle('on', m==='baht');
+  document.getElementById('mPct').classList.toggle('on', m==='percent');
+  recalc();
+}
+function recalc(){
+  const sub = cartTotal();
+  const d = discountAmount();
+  const total = sub - d;
+  document.getElementById('sumSub').textContent = '฿'+sub.toLocaleString();
+  const dr = document.getElementById('discRow');
+  if(d > 0){ dr.style.display='flex'; document.getElementById('sumDisc').textContent = '− ฿'+d.toLocaleString(); }
+  else dr.style.display='none';
+  document.getElementById('sumTotal').textContent = '฿'+total.toLocaleString();
+  document.getElementById('qrAmt').textContent = '฿'+total.toLocaleString();
+  document.getElementById('qrCard').innerHTML = qrSVG(total);
+}
+function markPaid(){
+  const rec = currentSaleRecord();
+  document.getElementById('successCheck').classList.add('show');
+  setTimeout(()=>{
+    sales.unshift(rec);
+    for(const k in cart) delete cart[k];
+    document.querySelectorAll('.card.in-cart').forEach(c=>c.classList.remove('in-cart'));
+    updateCartBar();
+    backToPos();
+  },1500);
+}
+function currentSaleRecord(){
+  const parts = Object.entries(cart).map(([id,q])=>{
+    const p = products.find(x=>x.id==id); return p.name+' ×'+q;
+  });
+  const now = new Date();
+  const time = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  return { time, event:CURRENT_EVENT, items:parts.join(', '), qty:cartCount(), total:cartTotal()-discountAmount() };
+}
+
+/* ---------- history ---------- */
+const CURRENT_EVENT = 'ตลาดนัดรถไฟ';
+const events = ['ตลาดนัดรถไฟ', 'ถนนคนเดินเชียงคาน', 'งานวัดสวนหลวง'];
+const sales = [
+  { time:'14:37', event:'ตลาดนัดรถไฟ', items:'ชาไทยเย็น ×2, ครัวซองต์ ×1', qty:3, total:130 },
+  { time:'14:22', event:'ตลาดนัดรถไฟ', items:'ไก่ทอดกรอบ ×1, มะนาวโซดา ×2', qty:3, total:149 },
+  { time:'13:58', event:'ตลาดนัดรถไฟ', items:'บิงซูสตรอว์ ×1', qty:1, total:120 },
+  { time:'13:31', event:'ตลาดนัดรถไฟ', items:'ลูกชิ้นปิ้ง ×5', qty:5, total:100 },
+  { time:'20:14', event:'ถนนคนเดินเชียงคาน', items:'อเมริกาโน่ ×2', qty:2, total:100 },
+  { time:'19:02', event:'ถนนคนเดินเชียงคาน', items:'โดนัทเคลือบ ×3, ชาไทยเย็น ×1', qty:4, total:135 },
+  { time:'18:40', event:'ถนนคนเดินเชียงคาน', items:'คุกกี้กล่องของขวัญ ×1', qty:1, total:180 },
+  { time:'17:25', event:'งานวัดสวนหลวง', items:'แยมโฮมเมด ×2', qty:2, total:300 },
+];
+let histFilter = CURRENT_EVENT;
+function setHistFilter(e){ histFilter = e; renderHistory(); }
+function renderHistory(){
+  const list = histFilter==='all' ? sales : sales.filter(s=>s.event===histFilter);
+  const total = list.reduce((s,x)=>s+x.total,0);
+  const chips = `<div class="hf-select">
+    <select onchange="setHistFilter(this.value)">
+      <option value="all" ${histFilter==='all'?'selected':''}>ทุกงาน</option>
+      ${events.map(e=>`<option value="${e}" ${histFilter===e?'selected':''}>${e}</option>`).join('')}
+    </select>
+    <svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>`;
+  const body = list.length ? list.map(saleHTML).join('')
+    : `<div style="text-align:center;color:var(--pewter);font-family:'Niramit';padding:40px 0;font-size:13px">ยังไม่มีรายการขายในงานนี้</div>`;
+  document.getElementById('histBody').innerHTML = chips + `
+    <div class="hist-summary">
+      <div class="hs-card gold"><div class="k">ยอดขาย${histFilter==='all'?'รวมทุกงาน':''}</div><div class="v">฿${total.toLocaleString()}</div></div>
+      <div class="hs-card"><div class="k">จำนวนบิล</div><div class="v">${list.length} <small>บิล</small></div></div>
+    </div>
+    <div class="hist-day">${histFilter==='all'?'ทุกงาน':histFilter} · 1 ก.ค. 2569</div>
+    ${body}`;
+}
+function saleHTML(s){
+  return `<div class="sale" onclick="toast('ดูรายละเอียดบิล')">
+    <div class="time">${s.time}</div>
+    <div class="desc"><div class="it">${s.items}</div><div class="mt">${s.qty} ชิ้น · ${s.event}</div></div>
+    <div class="amt">
+      <div class="t">฿${s.total.toLocaleString()}</div>
+      <div class="st"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>จ่ายแล้ว</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- fake but believable QR ---------- */
+function qrSVG(seed){
+  const N=25, cell=100/N;
+  let rng = (seed*9301+49297)%233280, rnd=()=>{rng=(rng*9301+49297)%233280; return rng/233280;};
+  let r=`<svg viewBox="0 0 100 100" shape-rendering="crispEdges">`;
+  const finder=(x,y)=>{
+    r+=`<rect x="${x*cell}" y="${y*cell}" width="${7*cell}" height="${7*cell}" fill="#111"/>`;
+    r+=`<rect x="${(x+1)*cell}" y="${(y+1)*cell}" width="${5*cell}" height="${5*cell}" fill="#fff"/>`;
+    r+=`<rect x="${(x+2)*cell}" y="${(y+2)*cell}" width="${3*cell}" height="${3*cell}" fill="#111"/>`;
+  };
+  const inFinder=(x,y)=>((x<8&&y<8)||(x>N-9&&y<8)||(x<8&&y>N-9));
+  for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+    if(inFinder(x,y)) continue;
+    if(rnd()>0.52) r+=`<rect x="${x*cell}" y="${y*cell}" width="${cell}" height="${cell}" fill="#141414"/>`;
+  }
+  finder(0,0); finder(N-7,0); finder(0,N-7);
+  return r+`</svg>`;
+}
+
+/* ---------- helpers ---------- */
+function numOnly(el){ el.value = el.value.replace(/[^0-9]/g,''); }
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),1600);
+}
+</script>
+
+<p class="hint-caption">ม็อคอัพ · แตะการ์ดสินค้าเพื่อ +1 · กด “ชำระเงิน” เพื่อดูหน้า PromptPay · ปุ่ม “จ่ายแล้ว” = ตัดสต็อก+เก็บเวลา</p>
+</body>
+</html>
