@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
 import { useApp } from '../store'
-import { fileToResizedDataURL } from '../lib/image'
+import { fileToDataURL } from '../lib/image'
+import { CropModal } from '../components/CropModal'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconCamera, IconCheck, IconPlus, IconMinus, IconTrash } from '../components/Icons'
 
@@ -24,6 +25,7 @@ export function AddProductScreen() {
   const [price, setPrice] = useState('')
   const [stock, setStock] = useState('20')
   const [image, setImage] = useState<string | undefined>()
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [catId, setCatId] = useState<string | null>(null)
   const [newCat, setNewCat] = useState({ on: false, name: '', bg: '#364958', text: '#E8FDFF', border: '#E7CB9C' })
 
@@ -46,7 +48,7 @@ export function AddProductScreen() {
 
   async function pickImage(file: File) {
     try {
-      setImage(await fileToResizedDataURL(file))
+      setCropSrc(await fileToDataURL(file)) // เปิดหน้าครอปก่อนบันทึก
     } catch {
       showToast('อ่านรูปไม่สำเร็จ')
     }
@@ -106,19 +108,33 @@ export function AddProductScreen() {
       <div className="flex-1 overflow-y-auto px-5 pb-5 pt-[18px]">
         {/* image */}
         <Field label="รูปสินค้า">
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed border-white/20 bg-surface text-pewter"
-          >
-            {image ? (
+          {image ? (
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10">
               <img src={image} alt="preview" className="h-full w-full object-cover" />
-            ) : (
-              <>
-                <IconCamera width={34} height={34} />
-                <span className="text-[13px]">แตะเพื่อถ่ายรูป / เลือกรูป</span>
-              </>
-            )}
-          </button>
+              <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/70 to-transparent p-2.5">
+                <button
+                  onClick={() => setCropSrc(image)}
+                  className="flex-1 rounded-lg bg-black/50 py-2 text-[12px] font-medium text-milky backdrop-blur"
+                >
+                  ครอปรูป
+                </button>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="flex-1 rounded-lg bg-black/50 py-2 text-[12px] font-medium text-milky backdrop-blur"
+                >
+                  เปลี่ยนรูป
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-surface text-pewter"
+            >
+              <IconCamera width={34} height={34} />
+              <span className="text-[13px]">แตะเพื่อถ่ายรูป / เลือกรูป</span>
+            </button>
+          )}
           <input
             ref={fileRef}
             type="file"
@@ -246,6 +262,17 @@ export function AddProductScreen() {
           {isEdit ? 'บันทึก' : 'บันทึกสินค้า'}
         </button>
       </div>
+
+      {cropSrc && (
+        <CropModal
+          src={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onDone={(d) => {
+            setImage(d)
+            setCropSrc(null)
+          }}
+        />
+      )}
     </>
   )
 }
