@@ -12,6 +12,8 @@ import { ProductsScreen } from './screens/ProductsScreen'
 import { AddProductScreen } from './screens/AddProductScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import { DonateScreen } from './screens/DonateScreen'
+import { InstallScreen } from './screens/InstallScreen'
+import { InstallBanner } from './components/InstallBanner'
 
 const MAIN = new Set(['pos', 'history', 'settings'])
 
@@ -37,6 +39,7 @@ export default function App() {
   return (
     <div className="flex h-[100dvh] justify-center bg-[#0e0f10]">
       <div className="relative flex h-full w-full max-w-[430px] flex-col overflow-hidden bg-ink">
+        {MAIN.has(screen) && <InstallBanner />}
         {screen === 'pos' && <PosScreen />}
         {screen === 'checkout' && <CheckoutScreen />}
         {screen === 'history' && <HistoryScreen />}
@@ -45,6 +48,7 @@ export default function App() {
         {screen === 'addProduct' && <AddProductScreen />}
         {screen === 'categories' && <CategoriesScreen />}
         {screen === 'donate' && <DonateScreen />}
+        {screen === 'install' && <InstallScreen />}
         {MAIN.has(screen) && <BottomNav />}
         <Toast />
       </div>

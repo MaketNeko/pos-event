@@ -7,7 +7,7 @@ import { todayISO } from '../lib/format'
 import { ScreenHeader } from '../components/ScreenHeader'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
-  IconDatabase, IconUpload, IconChevronRight, IconHeart,
+  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload,
 } from '../components/Icons'
 
 export function SettingsScreen() {
@@ -155,6 +155,13 @@ export function SettingsScreen() {
         </Group>
 
         <Group title="เกี่ยวกับ">
+          <SettingRow
+            icon={<IconDownload width={18} height={18} />}
+            label="ติดตั้งแอป / ใช้ออฟไลน์"
+            sub="เพิ่มลงหน้าจอโฮม"
+            onClick={() => go('install')}
+            chevron
+          />
           <SettingRow
             icon={<IconHeart width={18} height={18} />}
             label="สนับสนุนผู้พัฒนา"

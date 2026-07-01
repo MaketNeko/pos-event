@@ -10,6 +10,7 @@ export type Screen =
   | 'addProduct'
   | 'categories'
   | 'donate'
+  | 'install'
 
 interface AppState {
   // navigation
