@@ -8,7 +8,7 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { CropModal } from '../components/CropModal'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
-  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash,
+  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash, IconTag,
 } from '../components/Icons'
 
 export function SettingsScreen() {
@@ -141,6 +141,13 @@ export function SettingsScreen() {
             label="สินค้า"
             sub={`${productCount ?? 0} รายการ`}
             onClick={() => go('products')}
+            chevron
+          />
+          <SettingRow
+            icon={<IconTag width={18} height={18} />}
+            label="เซ็ต / โปรโมชั่น"
+            sub="เซ็ตตายตัว + มิกซ์แอนด์แมตช์"
+            onClick={() => go('sets')}
             chevron
           />
           <SettingRow

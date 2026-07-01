@@ -75,7 +75,8 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
           {/* totals */}
           <div className="space-y-1.5">
             <Row k="ยอดรวม" v={baht(sale.subtotal)} />
-            {sale.discount > 0 && <Row k="ส่วนลด" v={`− ${baht(sale.discount)}`} gold />}
+            {sale.setDiscount > 0 && <Row k="ส่วนลดโปรเซ็ต" v={`− ${baht(sale.setDiscount)}`} gold />}
+            {sale.discount > 0 && <Row k="ส่วนลดท้ายบิล" v={`− ${baht(sale.discount)}`} gold />}
           </div>
           <div className="mt-3 flex items-baseline justify-between border-t border-dashed border-white/20 pt-3">
             <span className="text-[15px] text-milky">ยอดสุทธิ</span>
@@ -85,7 +86,7 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
           {/* method + footer */}
           <div className="mt-4 flex items-center justify-center gap-1.5 text-[12px] text-[#82C08C]">
             <IconCheck width={13} height={13} strokeWidth={3} />
-            ชำระผ่าน PromptPay · จ่ายแล้ว
+            ชำระด้วย {sale.method === 'cash' ? 'เงินสด' : 'PromptPay'} · จ่ายแล้ว
           </div>
           <div className="mb-6 mt-4 text-center text-[11px] text-pewter/70">
             ขอบคุณที่อุดหนุน 🙏

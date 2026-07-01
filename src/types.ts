@@ -26,8 +26,26 @@ export interface Event {
   createdAt: number
 }
 
-export interface SaleItem {
+export interface SetComponent {
   productId: string
+  qty: number
+}
+
+export interface ProductSet {
+  id: string
+  name: string
+  type: 'fixed' | 'mix' // fixed = combo; mix = N items for a price
+  price: number
+  active: boolean
+  order: number
+  items?: SetComponent[] // fixed: exact components
+  productIds?: string[] // mix: eligible products
+  n?: number // mix: items per bundle
+}
+
+export interface SaleItem {
+  kind: 'product' | 'set'
+  refId: string // productId or setId
   name: string
   price: number
   qty: number
@@ -39,7 +57,8 @@ export interface Sale {
   eventName: string
   items: SaleItem[]
   subtotal: number
-  discount: number
+  setDiscount: number // saved by mix & match promos
+  discount: number // manual bill discount
   total: number
   method: 'promptpay' | 'cash'
   createdAt: number // epoch ms

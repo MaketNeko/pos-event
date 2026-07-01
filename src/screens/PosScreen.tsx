@@ -3,13 +3,16 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht, thaiDate } from '../lib/format'
-import { IconChart, IconGear, IconArrowRight } from '../components/Icons'
+import { IconChart, IconGear, IconArrowRight, IconTag } from '../components/Icons'
 import { ShopAvatar } from '../components/ShopAvatar'
+import { setAvailable } from '../lib/sets'
 
 export function PosScreen() {
   const go = useApp((s) => s.go)
   const cart = useApp((s) => s.cart)
   const addToCart = useApp((s) => s.addToCart)
+  const setCart = useApp((s) => s.setCart)
+  const addSet = useApp((s) => s.addSet)
   const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
   const setCurrentEvent = useApp((s) => s.setCurrentEvent)
@@ -17,6 +20,7 @@ export function PosScreen() {
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
   const products = useLiveQuery(() => db.products.orderBy('order').toArray(), [])
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
+  const sets = useLiveQuery(() => db.sets.orderBy('order').toArray(), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
   const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
 
@@ -25,12 +29,20 @@ export function PosScreen() {
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
 
   const onSale = (pid: string) => products?.find((p) => p.id === pid)
-  const count = Object.values(cart).reduce((a, b) => a + b, 0)
-  const total = useMemo(
-    () =>
-      Object.entries(cart).reduce((s, [id, q]) => s + q * (onSale(id)?.price ?? 0), 0),
-    [cart, products],
-  )
+  const activeFixed = (sets ?? []).filter((s) => s.type === 'fixed' && s.active)
+  const mixSets = (sets ?? []).filter((s) => s.type === 'mix' && s.active)
+  const count =
+    Object.values(cart).reduce((a, b) => a + b, 0) +
+    Object.values(setCart).reduce((a, b) => a + b, 0)
+  const total = useMemo(() => {
+    const prod = Object.entries(cart).reduce((s, [id, q]) => s + q * (onSale(id)?.price ?? 0), 0)
+    const set = Object.entries(setCart).reduce(
+      (s, [id, q]) => s + q * ((sets ?? []).find((x) => x.id === id)?.price ?? 0),
+      0,
+    )
+    return prod + set
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart, setCart, products, sets])
 
   const visibleCats = (categories ?? []).filter((c) =>
     (products ?? []).some((p) => p.categoryId === c.id && p.active),
@@ -45,6 +57,14 @@ export function PosScreen() {
       return
     }
     addToCart(pid)
+  }
+
+  const tapSet = (setId: string, avail: number) => {
+    if ((setCart[setId] ?? 0) >= avail) {
+      showToast('สต็อกไม่พอ')
+      return
+    }
+    addSet(setId)
   }
 
   const jump = (id: string) => {
@@ -96,6 +116,9 @@ export function PosScreen() {
       {/* tabs */}
       <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-1.5 pt-3.5">
         <Tab label="ทั้งหมด" active={activeTab === 'all'} onClick={() => jump('all')} />
+        {activeFixed.length > 0 && (
+          <Tab label="เซ็ต" active={activeTab === '__sets'} onClick={() => jump('__sets')} />
+        )}
         {visibleCats.map((c) => (
           <Tab
             key={c.id}
@@ -106,11 +129,76 @@ export function PosScreen() {
         ))}
       </div>
 
+      {/* mix & match promo hints */}
+      {mixSets.length > 0 && (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-0.5 pt-1">
+          {mixSets.map((m) => (
+            <span
+              key={m.id}
+              className="flex-none whitespace-nowrap rounded-full border border-[#D07AA4]/40 bg-[#D07AA4]/10 px-3 py-1 text-[11px] text-[#e08cb8]"
+            >
+              {m.name} · {m.n} ชิ้น {baht(m.price)}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* catalog */}
       <div ref={scrollRef} className="no-scrollbar flex-1 overflow-y-auto px-4 pb-[200px] pt-2">
-        {visibleCats.length === 0 && (
+        {visibleCats.length === 0 && activeFixed.length === 0 && (
           <EmptyState onAdd={() => go('addProduct')} />
         )}
+
+        {/* fixed set cards */}
+        {activeFixed.length > 0 && (
+          <section
+            ref={(el) => {
+              sectionRefs.current['__sets'] = el
+            }}
+            className="mt-[18px]"
+          >
+            <div className="mb-3 flex items-center gap-2.5 px-1">
+              <span className="h-2.5 w-2.5 rounded-[3px] bg-electrum" />
+              <h3 className="font-serif text-[15px] font-semibold text-electrum">เซ็ต</h3>
+              <span className="ml-auto text-[11px] text-pewter">{activeFixed.length} รายการ</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {activeFixed.map((s) => {
+                const avail = setAvailable(s, products ?? [])
+                const q = setCart[s.id] ?? 0
+                const out = avail <= 0
+                return (
+                  <button
+                    key={s.id}
+                    disabled={out}
+                    onClick={() => tapSet(s.id, avail)}
+                    className="relative flex flex-col overflow-hidden rounded-[18px] border border-electrum/30 bg-surface text-left transition active:scale-95 disabled:opacity-40"
+                    style={{ borderTop: '3px solid #E7CB9C' }}
+                  >
+                    {q > 0 && (
+                      <span className="absolute right-2 top-2 z-10 grid h-6 min-w-[24px] place-items-center rounded-xl bg-electrum px-1.5 text-xs font-bold text-[#2a2115] shadow">
+                        {q}
+                      </span>
+                    )}
+                    <div className="grid aspect-square w-full place-items-center bg-[#20262b] text-electrum/70">
+                      <IconTag width={40} height={40} />
+                    </div>
+                    <div className="flex flex-col gap-1.5 px-2.5 pb-2.5 pt-2">
+                      <div className="text-[13px] font-medium leading-tight text-milky">{s.name}</div>
+                      <div className="flex items-baseline justify-between gap-1.5">
+                        <span className="font-num text-base font-semibold text-electrum">{baht(s.price)}</span>
+                        <span className="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-pewter">
+                          {out ? 'หมด' : `เหลือ ${avail}`}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
         {visibleCats.map((c) => {
           const items = (products ?? []).filter((p) => p.categoryId === c.id && p.active)
           return (

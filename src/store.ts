@@ -12,6 +12,7 @@ export type Screen =
   | 'donate'
   | 'install'
   | 'events'
+  | 'sets'
 
 interface AppState {
   // navigation
@@ -24,6 +25,11 @@ interface AppState {
   addToCart: (id: string) => void
   decCart: (id: string) => void
   removeCart: (id: string) => void
+  // setCart: setId -> qty (fixed combos)
+  setCart: Record<string, number>
+  addSet: (id: string) => void
+  decSet: (id: string) => void
+  removeSet: (id: string) => void
   clearCart: () => void
 
   // current event
@@ -58,7 +64,26 @@ export const useApp = create<AppState>((set) => ({
       delete cart[id]
       return { cart }
     }),
-  clearCart: () => set({ cart: {} }),
+
+  setCart: {},
+  addSet: (id) =>
+    set((s) => ({ setCart: { ...s.setCart, [id]: (s.setCart[id] ?? 0) + 1 } })),
+  decSet: (id) =>
+    set((s) => {
+      const n = (s.setCart[id] ?? 0) - 1
+      const setCart = { ...s.setCart }
+      if (n <= 0) delete setCart[id]
+      else setCart[id] = n
+      return { setCart }
+    }),
+  removeSet: (id) =>
+    set((s) => {
+      const setCart = { ...s.setCart }
+      delete setCart[id]
+      return { setCart }
+    }),
+
+  clearCart: () => set({ cart: {}, setCart: {} }),
 
   currentEventId: '',
   setCurrentEvent: (id) => {
