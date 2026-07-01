@@ -46,7 +46,9 @@ export function CropModal({ src, onCancel, onDone }: Props) {
           crop={crop}
           zoom={zoom}
           aspect={1}
-          zoomSpeed={0.2}
+          minZoom={1}
+          maxZoom={5}
+          zoomSpeed={0.3}
           showGrid
           onCropChange={setCrop}
           onZoomChange={setZoom}
@@ -55,16 +57,20 @@ export function CropModal({ src, onCancel, onDone }: Props) {
       </div>
 
       <div className="space-y-4 border-t border-white/10 bg-ink px-5 pb-safe pt-4">
-        <input
-          type="range"
-          min={1}
-          max={3}
-          step={0.01}
-          value={zoom}
-          onChange={(e) => setZoom(Number(e.target.value))}
-          className="w-full"
-          style={{ accentColor: '#E7CB9C' }}
-        />
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] text-pewter">ซูม</span>
+          <input
+            type="range"
+            min={1}
+            max={5}
+            step={0.01}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: '#E7CB9C' }}
+          />
+          <span className="w-9 text-right font-num text-[12px] text-pewter">{zoom.toFixed(1)}×</span>
+        </div>
         <div className="flex gap-2.5">
           <button
             onClick={onCancel}
