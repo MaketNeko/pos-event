@@ -41,7 +41,7 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] justify-center bg-[#0e0f10]">
-      <div className="relative flex h-full w-full max-w-[430px] flex-col overflow-hidden bg-ink">
+      <div className="relative flex h-full w-full max-w-[430px] flex-col overflow-hidden bg-ink sm:max-w-[600px] md:max-w-[820px]">
         {MAIN.has(screen) && <InstallBanner />}
         {screen === 'pos' && <PosScreen />}
         {screen === 'checkout' && <CheckoutScreen />}

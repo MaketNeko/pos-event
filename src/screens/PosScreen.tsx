@@ -163,7 +163,7 @@ export function PosScreen() {
               <h3 className="font-serif text-[15px] font-semibold text-electrum">เซ็ต</h3>
               <span className="ml-auto text-[11px] text-pewter">{activeFixed.length} รายการ</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {activeFixed.map((s) => {
                 const avail = setAvailable(s, products ?? [])
                 const q = setCart[s.id] ?? 0
@@ -220,7 +220,7 @@ export function PosScreen() {
                 </h3>
                 <span className="ml-auto text-[11px] text-pewter">{items.length} รายการ</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {items.map((p) => {
                   const q = cart[p.id] ?? 0
                   const out = p.stock <= 0
