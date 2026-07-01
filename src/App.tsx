@@ -14,6 +14,7 @@ import { CategoriesScreen } from './screens/CategoriesScreen'
 import { DonateScreen } from './screens/DonateScreen'
 import { InstallScreen } from './screens/InstallScreen'
 import { InstallBanner } from './components/InstallBanner'
+import { UpdatePrompt } from './components/UpdatePrompt'
 
 const MAIN = new Set(['pos', 'history', 'settings'])
 
@@ -50,6 +51,7 @@ export default function App() {
         {screen === 'donate' && <DonateScreen />}
         {screen === 'install' && <InstallScreen />}
         {MAIN.has(screen) && <BottomNav />}
+        <UpdatePrompt />
         <Toast />
       </div>
     </div>

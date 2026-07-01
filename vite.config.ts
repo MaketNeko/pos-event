@@ -13,7 +13,8 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       VitePWA({
-        registerType: 'autoUpdate',
+        registerType: 'prompt',
+        injectRegister: false,
         includeAssets: ['favicon.svg'],
         manifest: {
           name: 'NekoPOS',
