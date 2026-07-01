@@ -6,6 +6,7 @@ import type { Sale } from '../types'
 
 export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => void }) {
   const shopName = useLiveQuery(() => getSetting('shopName'), []) ?? ''
+  const shopImage = useLiveQuery(() => getSetting('shopImage'), []) ?? ''
   const d = new Date(sale.createdAt)
   const dateStr = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })
 
@@ -32,6 +33,13 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
         <div className="overflow-y-auto px-6 pb-safe">
           {/* head */}
           <div className="pt-2 text-center">
+            {shopImage && (
+              <img
+                src={shopImage}
+                alt="ร้าน"
+                className="mx-auto mb-2.5 h-16 w-16 rounded-full border border-white/15 object-cover"
+              />
+            )}
             <div className="font-serif text-xl font-semibold text-milky">{shopName || 'NekoPOS'}</div>
             <div className="mt-0.5 text-[11px] uppercase tracking-[0.2em] text-electrum">ใบเสร็จรับเงิน</div>
           </div>

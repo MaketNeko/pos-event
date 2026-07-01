@@ -13,6 +13,7 @@ import { AddProductScreen } from './screens/AddProductScreen'
 import { CategoriesScreen } from './screens/CategoriesScreen'
 import { DonateScreen } from './screens/DonateScreen'
 import { InstallScreen } from './screens/InstallScreen'
+import { EventsScreen } from './screens/EventsScreen'
 import { InstallBanner } from './components/InstallBanner'
 import { UpdatePrompt } from './components/UpdatePrompt'
 
@@ -50,6 +51,7 @@ export default function App() {
         {screen === 'categories' && <CategoriesScreen />}
         {screen === 'donate' && <DonateScreen />}
         {screen === 'install' && <InstallScreen />}
+        {screen === 'events' && <EventsScreen />}
         {MAIN.has(screen) && <BottomNav />}
         <UpdatePrompt />
         <Toast />

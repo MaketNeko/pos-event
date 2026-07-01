@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht, timeOf } from '../lib/format'
-import { ScreenHeader } from '../components/ScreenHeader'
 import { ReceiptModal } from '../components/ReceiptModal'
+import { ShopAvatar } from '../components/ShopAvatar'
 import { IconDownload, IconChevron, IconCheck } from '../components/Icons'
 import type { Sale } from '../types'
 
@@ -15,6 +15,8 @@ export function HistoryScreen() {
   const [selected, setSelected] = useState<Sale | null>(null)
 
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
+  const shopName = useLiveQuery(() => getSetting('shopName'), [])
+  const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
   const sales = useLiveQuery(
     () => db.sales.orderBy('createdAt').reverse().toArray(),
     [],
@@ -61,18 +63,21 @@ export function HistoryScreen() {
 
   return (
     <>
-      <ScreenHeader
-        title="ประวัติการขาย"
-        subtitle="เลือกงานที่ต้องการดู"
-        right={
-          <button
-            onClick={exportCSV}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-surface text-pewter"
-          >
-            <IconDownload width={19} height={19} />
-          </button>
-        }
-      />
+      <header className="flex items-center gap-3 border-b border-white/10 px-4 pb-4 pt-[38px]">
+        <ShopAvatar image={shopImage} size={44} />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">
+            {shopName || 'NekoPOS'}
+          </div>
+          <div className="text-[11px] text-pewter">ประวัติการขาย</div>
+        </div>
+        <button
+          onClick={exportCSV}
+          className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-white/10 bg-surface text-pewter"
+        >
+          <IconDownload width={19} height={19} />
+        </button>
+      </header>
 
       <div className="flex-1 overflow-y-auto px-5 pb-[90px] pt-4">
         {/* dropdown */}

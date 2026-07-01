@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht, thaiDate } from '../lib/format'
 import { IconChart, IconGear, IconArrowRight } from '../components/Icons'
+import { ShopAvatar } from '../components/ShopAvatar'
 
 export function PosScreen() {
   const go = useApp((s) => s.go)
@@ -16,6 +17,8 @@ export function PosScreen() {
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
   const products = useLiveQuery(() => db.products.orderBy('order').toArray(), [])
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
+  const shopName = useLiveQuery(() => getSetting('shopName'), [])
+  const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
 
   const [activeTab, setActiveTab] = useState<string>('all')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -53,25 +56,28 @@ export function PosScreen() {
   return (
     <>
       {/* top bar */}
-      <header className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-b from-[#1b1e21] to-transparent px-5 pb-3.5 pt-[38px]">
+      <header className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-b from-[#1b1e21] to-transparent px-4 pb-3.5 pt-[38px]">
+        <ShopAvatar image={shopImage} size={46} />
         <div className="min-w-0 flex-1">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-electrum">
-            งานที่กำลังขาย
-          </span>
-          <select
-            value={currentEventId}
-            onChange={(e) => setCurrentEvent(e.target.value)}
-            className="block w-full truncate bg-transparent font-serif text-lg font-semibold text-milky outline-none"
-          >
-            {(events ?? []).map((e) => (
-              <option key={e.id} value={e.id} className="bg-surface text-milky">
-                {e.name}
-              </option>
-            ))}
-          </select>
-          <span className="text-[11px] text-pewter">
-            {event ? thaiDate(event.date) : '—'}
-          </span>
+          <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">
+            {shopName || 'NekoPOS'}
+          </div>
+          <div className="flex items-center gap-1">
+            <select
+              value={currentEventId}
+              onChange={(e) => setCurrentEvent(e.target.value)}
+              className="max-w-[62%] truncate bg-transparent text-[13px] font-medium text-electrum outline-none"
+            >
+              {(events ?? []).map((e) => (
+                <option key={e.id} value={e.id} className="bg-surface text-milky">
+                  {e.name}
+                </option>
+              ))}
+            </select>
+            <span className="truncate text-[11px] text-pewter">
+              · {event ? thaiDate(event.date) : '—'}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => go('history')}

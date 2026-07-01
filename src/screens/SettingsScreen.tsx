@@ -1,21 +1,24 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, uid, getSetting, setSetting } from '../db'
+import { db, getSetting, setSetting } from '../db'
 import { useApp } from '../store'
-import { todayISO } from '../lib/format'
+import { fileToDataURL } from '../lib/image'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { CropModal } from '../components/CropModal'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
-  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload,
+  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash,
 } from '../components/Icons'
 
 export function SettingsScreen() {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
-  const setCurrentEvent = useApp((s) => s.setCurrentEvent)
   const fileRef = useRef<HTMLInputElement>(null)
+  const shopFileRef = useRef<HTMLInputElement>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
 
+  const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), [])
   const events = useLiveQuery(() => db.events.toArray(), [])
@@ -23,15 +26,6 @@ export function SettingsScreen() {
   const cats = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
 
   const loaded = shopName !== undefined && promptpay !== undefined
-
-  async function addEvent() {
-    const name = window.prompt('ชื่องานใหม่')?.trim()
-    if (!name) return
-    const id = uid()
-    await db.events.add({ id, name, date: todayISO(), createdAt: Date.now() })
-    setCurrentEvent(id)
-    showToast('เพิ่มงานแล้ว')
-  }
 
   async function backup() {
     const data = {
@@ -78,6 +72,35 @@ export function SettingsScreen() {
 
       <div className="flex-1 overflow-y-auto px-5 pb-[90px] pt-[18px]">
         <Group title="ร้าน & การรับเงิน">
+          <button
+            onClick={() => shopFileRef.current?.click()}
+            className="flex w-full items-center gap-3.5 border-b border-white/10 px-4 py-3.5 text-left active:bg-surface-2"
+          >
+            <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-full border border-white/15 bg-surface-2 text-pewter">
+              {shopImage ? (
+                <img src={shopImage} alt="ร้าน" className="h-full w-full object-cover" />
+              ) : (
+                <IconStore width={20} height={20} />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm">รูปโปรไฟล์ร้าน</div>
+              <div className="text-[11px] text-pewter">
+                {shopImage ? 'แตะเพื่อเปลี่ยนรูป' : 'แตะเพื่อเพิ่มรูป'}
+              </div>
+            </div>
+            {shopImage && (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void setSetting('shopImage', '')
+                }}
+                className="grid h-9 w-9 flex-none place-items-center rounded-lg text-[#c96b6b]"
+              >
+                <IconTrash width={17} height={17} />
+              </span>
+            )}
+          </button>
           {loaded && (
             <>
               <SettingRow icon={<IconStore width={18} height={18} />} label="ชื่อร้าน">
@@ -108,9 +131,9 @@ export function SettingsScreen() {
         <Group title="งาน & สินค้า">
           <SettingRow
             icon={<IconCalendar width={18} height={18} />}
-            label="เพิ่มงานใหม่"
-            sub={`มีทั้งหมด ${events?.length ?? 0} งาน`}
-            onClick={addEvent}
+            label="งานที่จะออก"
+            sub={`จัดการ · ${events?.length ?? 0} งาน`}
+            onClick={() => go('events')}
             chevron
           />
           <SettingRow
@@ -182,7 +205,29 @@ export function SettingsScreen() {
             e.target.value = ''
           }}
         />
+        <input
+          ref={shopFileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void fileToDataURL(f).then(setCropSrc).catch(() => showToast('อ่านรูปไม่สำเร็จ'))
+            e.target.value = ''
+          }}
+        />
       </div>
+
+      {cropSrc && (
+        <CropModal
+          src={cropSrc}
+          onCancel={() => setCropSrc(null)}
+          onDone={(d) => {
+            void setSetting('shopImage', d)
+            setCropSrc(null)
+          }}
+        />
+      )}
     </>
   )
 }

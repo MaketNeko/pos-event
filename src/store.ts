@@ -11,6 +11,7 @@ export type Screen =
   | 'categories'
   | 'donate'
   | 'install'
+  | 'events'
 
 interface AppState {
   // navigation
