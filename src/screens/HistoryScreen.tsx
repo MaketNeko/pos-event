@@ -4,6 +4,7 @@ import { db } from '../db'
 import { useApp } from '../store'
 import { baht, timeOf } from '../lib/format'
 import { ScreenHeader } from '../components/ScreenHeader'
+import { ReceiptModal } from '../components/ReceiptModal'
 import { IconDownload, IconChevron, IconCheck } from '../components/Icons'
 import type { Sale } from '../types'
 
@@ -11,6 +12,7 @@ export function HistoryScreen() {
   const currentEventId = useApp((s) => s.currentEventId)
   const showToast = useApp((s) => s.showToast)
   const [filter, setFilter] = useState<string>(currentEventId || 'all')
+  const [selected, setSelected] = useState<Sale | null>(null)
 
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
   const sales = useLiveQuery(
@@ -120,18 +122,23 @@ export function HistoryScreen() {
         {list.length === 0 ? (
           <div className="py-10 text-center text-[13px] text-pewter">ยังไม่มีรายการขายในงานนี้</div>
         ) : (
-          list.map((s) => <SaleRow key={s.id} sale={s} />)
+          list.map((s) => <SaleRow key={s.id} sale={s} onOpen={() => setSelected(s)} />)
         )}
       </div>
+
+      {selected && <ReceiptModal sale={selected} onClose={() => setSelected(null)} />}
     </>
   )
 }
 
-function SaleRow({ sale }: { sale: Sale }) {
+function SaleRow({ sale, onOpen }: { sale: Sale; onOpen: () => void }) {
   const items = sale.items.map((i) => `${i.name} ×${i.qty}`).join(', ')
   const qty = sale.items.reduce((a, b) => a + b.qty, 0)
   return (
-    <div className="mb-2.5 flex items-center gap-3 rounded-2xl border border-white/10 bg-surface px-3.5 py-3.5">
+    <button
+      onClick={onOpen}
+      className="mb-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface px-3.5 py-3.5 text-left transition active:scale-[0.99] hover:border-white/20"
+    >
       <div className="w-[50px] flex-none font-num text-[15px] font-semibold text-milky">
         {timeOf(sale.createdAt)}
       </div>
@@ -148,6 +155,6 @@ function SaleRow({ sale }: { sale: Sale }) {
           จ่ายแล้ว
         </div>
       </div>
-    </div>
+    </button>
   )
 }

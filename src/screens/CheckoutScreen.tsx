@@ -18,6 +18,7 @@ export function CheckoutScreen() {
   const removeCart = useApp((s) => s.removeCart)
   const clearCart = useApp((s) => s.clearCart)
   const go = useApp((s) => s.go)
+  const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
 
   const products = useLiveQuery(() => db.products.toArray(), [])
@@ -107,8 +108,15 @@ export function CheckoutScreen() {
               </button>
               <span className="w-6 text-center font-num text-base font-semibold">{l.qty}</span>
               <button
-                onClick={() => addToCart(l.p.id)}
-                className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum"
+                onClick={() => {
+                  if (l.qty >= l.p.stock) {
+                    showToast('สต็อกไม่พอ')
+                    return
+                  }
+                  addToCart(l.p.id)
+                }}
+                disabled={l.qty >= l.p.stock}
+                className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum disabled:opacity-40"
               >
                 <IconPlus width={16} height={16} />
               </button>
