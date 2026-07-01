@@ -16,9 +16,9 @@ export default defineConfig(({ command }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg'],
         manifest: {
-          name: 'POS ขายตามงาน',
-          short_name: 'POS งาน',
-          description: 'ระบบขายหน้าร้านสำหรับออกงาน ใช้งานออฟไลน์',
+          name: 'NekoPOS',
+          short_name: 'NekoPOS',
+          description: 'NekoPOS — ระบบขายหน้าร้านสำหรับออกงาน ใช้งานออฟไลน์',
           lang: 'th',
           theme_color: '#171719',
           background_color: '#171719',
