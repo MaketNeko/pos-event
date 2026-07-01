@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht, thaiDate } from '../lib/format'
-import { IconChart, IconGear, IconArrowRight, IconTag } from '../components/Icons'
+import { IconChart, IconGear, IconArrowRight, IconTag, IconTrash } from '../components/Icons'
 import { ShopAvatar } from '../components/ShopAvatar'
 import { setAvailable } from '../lib/sets'
 
@@ -13,6 +13,7 @@ export function PosScreen() {
   const addToCart = useApp((s) => s.addToCart)
   const setCart = useApp((s) => s.setCart)
   const addSet = useApp((s) => s.addSet)
+  const clearCart = useApp((s) => s.clearCart)
   const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
   const setCurrentEvent = useApp((s) => s.setCurrentEvent)
@@ -282,10 +283,19 @@ export function PosScreen() {
 
       {/* cart bar */}
       <div
-        className={`absolute inset-x-3.5 bottom-[82px] z-[45] flex items-center gap-3 rounded-[20px] border border-white/20 bg-gradient-to-br from-[#2c363f] to-[#232a30] py-3 pl-[18px] pr-3 shadow-2xl transition-transform duration-300 ${
+        className={`absolute inset-x-3.5 bottom-[82px] z-[45] flex items-center gap-2.5 rounded-[20px] border border-white/20 bg-gradient-to-br from-[#2c363f] to-[#232a30] py-3 pl-3 pr-3 shadow-2xl transition-transform duration-300 ${
           count === 0 ? 'translate-y-[160%]' : 'translate-y-0'
         }`}
       >
+        <button
+          onClick={() => {
+            if (window.confirm('ยกเลิกรายการทั้งหมด?')) clearCart()
+          }}
+          className="grid h-11 w-11 flex-none place-items-center rounded-[14px] border border-white/15 text-pewter active:scale-95"
+          aria-label="ยกเลิกรายการ"
+        >
+          <IconTrash width={18} height={18} />
+        </button>
         <div className="flex flex-col">
           <span className="text-[11px] text-pewter">{count} รายการ</span>
           <span className="font-num text-[22px] font-semibold text-milky">{baht(total)}</span>
