@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useApp } from '../store'
 import { baht } from '../lib/format'
@@ -32,7 +32,7 @@ export function DonateScreen() {
 
       <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
         {/* hero */}
-        <div className="rounded-[22px] border border-white/10 bg-gradient-to-br from-[#2c363f] to-[#232a30] p-6 text-center">
+        <div className="rounded-[22px] border border-divider/10 bg-surface-2 p-6 text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-electrum text-electrum">
             <IconHeart width={30} height={30} />
           </div>
@@ -51,8 +51,8 @@ export function DonateScreen() {
               onClick={() => setAmount(a)}
               className={`flex-1 rounded-xl border py-2.5 text-[13px] font-medium transition ${
                 amount === a
-                  ? 'border-electrum bg-electrum text-[#2a2115]'
-                  : 'border-white/10 bg-surface text-pewter'
+                  ? 'border-electrum bg-electrum text-accent-on'
+                  : 'border-divider/10 bg-surface text-pewter'
               }`}
             >
               {a === 0 ? 'ตามใจ' : baht(a)}
@@ -61,7 +61,7 @@ export function DonateScreen() {
         </div>
 
         {/* QR only — no phone number shown anywhere */}
-        <div className="mt-4 rounded-[20px] border border-white/20 bg-gradient-to-b from-[#2b343c] to-[#20262c] p-5 text-center">
+        <div className="mt-4 rounded-[20px] border border-divider/20 bg-surface-2 p-5 text-center">
           <div className="mb-3.5 flex items-center justify-center gap-2">
             <IconCoffee width={18} height={18} className="text-electrum" />
             <span className="text-[13px] font-bold text-milky">PromptPay</span>
@@ -82,7 +82,7 @@ export function DonateScreen() {
           </label>
           <button
             onClick={copyDiscord}
-            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface px-4 py-3.5 text-left active:bg-surface-2"
+            className="flex w-full items-center gap-3 rounded-2xl border border-divider/10 bg-surface px-4 py-3.5 text-left active:bg-surface-2"
           >
             <div className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[#5865F2]/15 text-[#8b93f8]">
               <IconDiscord width={20} height={20} />

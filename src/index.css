@@ -2,8 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme variables ─────────────────────────────── */
 :root {
   color-scheme: dark;
+  /* Dark (default) */
+  --c-bg: 23 23 25;
+  --c-surface: 30 34 38;
+  --c-surface2: 37 43 49;
+  --c-text: 232 253 255;
+  --c-muted: 137 166 184;
+  --c-accent: 231 203 156;
+  --c-accent-on: 42 33 21;
+  --c-divider: 255 255 255;
+  --c-danger: 201 107 107;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --c-bg: 247 246 244;
+  --c-surface: 255 255 255;
+  --c-surface2: 240 238 235;
+  --c-text: 28 28 30;
+  --c-muted: 107 114 128;
+  --c-accent: 91 79 207;
+  --c-accent-on: 255 255 255;
+  --c-divider: 0 0 0;
+  --c-danger: 220 50 50;
+}
+
+[data-theme="citrus"] {
+  color-scheme: light;
+  --c-bg: 255 248 245;
+  --c-surface: 255 255 255;
+  --c-surface2: 254 219 223;
+  --c-text: 58 21 21;
+  --c-muted: 185 100 100;
+  --c-accent: 253 94 75;
+  --c-accent-on: 255 255 255;
+  --c-divider: 0 0 0;
+  --c-danger: 200 40 40;
+}
+
+[data-theme="veil"] {
+  color-scheme: light;
+  --c-bg: 248 247 255;
+  --c-surface: 255 255 255;
+  --c-surface2: 238 235 255;
+  --c-text: 26 21 53;
+  --c-muted: 139 133 184;
+  --c-accent: 159 153 209;
+  --c-accent-on: 255 255 255;
+  --c-divider: 0 0 0;
+  --c-danger: 220 50 50;
+}
+
+[data-theme="oasis"] {
+  color-scheme: light;
+  --c-bg: 239 234 218;
+  --c-surface: 248 245 237;
+  --c-surface2: 228 223 210;
+  --c-text: 26 36 32;
+  --c-muted: 82 121 108;
+  --c-accent: 59 88 75;
+  --c-accent-on: 239 234 218;
+  --c-divider: 0 0 0;
+  --c-danger: 180 60 60;
 }
 
 * {
@@ -18,8 +81,8 @@ body,
 
 body {
   margin: 0;
-  background: #0e0f10;
-  color: #e8fdff;
+  background: rgb(var(--c-bg));
+  color: rgb(var(--c-text));
   font-family: 'Niramit', 'Inter', system-ui, sans-serif;
   overscroll-behavior: none;
 }

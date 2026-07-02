@@ -13,6 +13,7 @@ export type Screen =
   | 'install'
   | 'events'
   | 'sets'
+  | 'dashboard'
 
 interface AppState {
   // navigation

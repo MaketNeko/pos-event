@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import Cropper from 'react-easy-crop'
 import { getCroppedImg, type PixelArea } from '../lib/image'
 import { IconBack, IconCheck } from './Icons'
@@ -27,10 +27,10 @@ export function CropModal({ src, onCancel, onDone }: Props) {
 
   return (
     <div className="absolute inset-0 z-[95] flex flex-col bg-ink">
-      <header className="flex items-center gap-3.5 border-b border-white/10 px-5 pb-4 pt-[38px]">
+      <header className="flex items-center gap-3.5 border-b border-divider/10 px-5 pb-4 pt-[38px]">
         <button
           onClick={onCancel}
-          className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-surface text-milky"
+          className="grid h-10 w-10 place-items-center rounded-xl border border-divider/10 bg-surface text-milky"
         >
           <IconBack width={20} height={20} />
         </button>
@@ -56,7 +56,7 @@ export function CropModal({ src, onCancel, onDone }: Props) {
         />
       </div>
 
-      <div className="space-y-4 border-t border-white/10 bg-ink px-5 pb-safe pt-4">
+      <div className="space-y-4 border-t border-divider/10 bg-ink px-5 pb-safe pt-4">
         <div className="flex items-center gap-3">
           <span className="text-[11px] text-pewter">ซูม</span>
           <input
@@ -74,14 +74,14 @@ export function CropModal({ src, onCancel, onDone }: Props) {
         <div className="flex gap-2.5">
           <button
             onClick={onCancel}
-            className="flex-none rounded-[15px] border border-white/20 px-4 py-3.5 font-medium text-pewter"
+            className="flex-none rounded-[15px] border border-divider/20 px-4 py-3.5 font-medium text-pewter"
           >
             ยกเลิก
           </button>
           <button
             onClick={done}
             disabled={busy || !area}
-            className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-electrum py-3.5 text-base font-bold text-[#2a2115] disabled:opacity-50"
+            className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-electrum py-3.5 text-base font-bold text-accent-on disabled:opacity-50"
           >
             <IconCheck width={20} height={20} />
             ใช้รูปนี้

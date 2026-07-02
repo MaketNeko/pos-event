@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useApp } from '../store'
 
 export function Toast() {
@@ -15,7 +15,7 @@ export function Toast() {
 
   return (
     <div
-      className={`pointer-events-none absolute left-1/2 top-20 z-[80] -translate-x-1/2 rounded-xl bg-electrum px-4 py-2.5 text-sm font-semibold text-[#2a2115] shadow-lg transition-all duration-300 ${
+      className={`pointer-events-none absolute left-1/2 top-20 z-[80] -translate-x-1/2 rounded-xl bg-electrum px-4 py-2.5 text-sm font-semibold text-accent-on shadow-lg transition-all duration-300 ${
         show ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0'
       }`}
     >

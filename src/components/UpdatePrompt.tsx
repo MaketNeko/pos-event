@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { IconDownload, IconX } from './Icons'
 
@@ -22,7 +22,7 @@ export function UpdatePrompt() {
   if (!needRefresh) return null
 
   return (
-    <div className="absolute inset-x-3 top-3 z-[85] rounded-2xl border border-electrum/40 bg-gradient-to-br from-[#2c363f] to-[#232a30] p-4 shadow-2xl">
+    <div className="absolute inset-x-3 top-3 z-[85] rounded-2xl border border-electrum/40 bg-surface-2 p-4 shadow-2xl">
       <div className="flex items-start gap-3">
         <div className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-electrum/15 text-electrum">
           <IconDownload width={18} height={18} />
@@ -52,7 +52,7 @@ export function UpdatePrompt() {
       </div>
       <button
         onClick={() => updateServiceWorker(true)}
-        className="mt-3 w-full rounded-xl bg-electrum py-2.5 text-[13px] font-semibold text-[#2a2115]"
+        className="mt-3 w-full rounded-xl bg-electrum py-2.5 text-[13px] font-semibold text-accent-on"
       >
         อัปเดตเลย
       </button>

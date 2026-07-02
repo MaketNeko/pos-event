@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
@@ -63,7 +63,7 @@ export function HistoryScreen() {
 
   return (
     <>
-      <header className="flex items-center gap-3 border-b border-white/10 px-4 pb-4 pt-[38px]">
+      <header className="flex items-center gap-3 border-b border-divider/10 px-4 pb-4 pt-[38px]">
         <ShopAvatar image={shopImage} size={44} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">
@@ -73,7 +73,7 @@ export function HistoryScreen() {
         </div>
         <button
           onClick={exportCSV}
-          className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-white/10 bg-surface text-pewter"
+          className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-divider/10 bg-surface text-pewter"
         >
           <IconDownload width={19} height={19} />
         </button>
@@ -85,7 +85,7 @@ export function HistoryScreen() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full appearance-none rounded-[13px] border border-white/10 bg-surface py-3 pl-4 pr-10 text-[15px] font-medium text-milky outline-none focus:border-electrum"
+            className="w-full appearance-none rounded-[13px] border border-divider/10 bg-surface py-3 pl-4 pr-10 text-[15px] font-medium text-milky outline-none focus:border-electrum"
           >
             <option value="all" className="bg-surface">
               ทุกงาน
@@ -105,13 +105,13 @@ export function HistoryScreen() {
 
         {/* summary */}
         <div className="flex gap-3">
-          <div className="flex-1 rounded-2xl border border-white/10 bg-gradient-to-br from-[#2c363f] to-[#232a30] p-3.5">
+          <div className="flex-1 rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
             <div className="text-[11px] text-pewter">
               ยอดขาย{filter === 'all' ? 'รวมทุกงาน' : ''}
             </div>
             <div className="mt-1 font-num text-[23px] font-semibold text-electrum">{baht(total)}</div>
           </div>
-          <div className="flex-1 rounded-2xl border border-white/10 bg-gradient-to-br from-[#2c363f] to-[#232a30] p-3.5">
+          <div className="flex-1 rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
             <div className="text-[11px] text-pewter">จำนวนบิล</div>
             <div className="mt-1 font-num text-[23px] font-semibold text-milky">
               {list.length} <span className="text-xs text-pewter">บิล</span>
@@ -142,7 +142,7 @@ function SaleRow({ sale, onOpen }: { sale: Sale; onOpen: () => void }) {
   return (
     <button
       onClick={onOpen}
-      className="mb-2.5 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-surface px-3.5 py-3.5 text-left transition active:scale-[0.99] hover:border-white/20"
+      className="mb-2.5 flex w-full items-center gap-3 rounded-2xl border border-divider/10 bg-surface px-3.5 py-3.5 text-left transition active:scale-[0.99] hover:border-divider/20"
     >
       <div className="w-[50px] flex-none font-num text-[15px] font-semibold text-milky">
         {timeOf(sale.createdAt)}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
 import { useApp } from '../store'
@@ -26,7 +26,7 @@ export function EventsScreen() {
         right={
           <button
             onClick={addEvent}
-            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-[#2a2115]"
+            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-accent-on"
           >
             <IconPlus width={16} height={16} />
             เพิ่ม
@@ -92,7 +92,7 @@ function EventRow({
   return (
     <div
       className={`mb-2.5 rounded-2xl border bg-surface ${
-        current ? 'border-electrum/40' : 'border-white/10'
+        current ? 'border-electrum/40' : 'border-divider/10'
       }`}
     >
       <div className="flex items-center gap-3 px-3.5 py-3">
@@ -113,7 +113,7 @@ function EventRow({
         <button
           onClick={onEdit}
           className={`grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] border ${
-            editing ? 'border-electrum text-electrum' : 'border-white/10 bg-surface-2 text-pewter'
+            editing ? 'border-electrum text-electrum' : 'border-divider/10 bg-surface-2 text-pewter'
           }`}
         >
           <IconPencil width={16} height={16} />
@@ -121,20 +121,20 @@ function EventRow({
       </div>
 
       {editing && (
-        <div className="border-t border-white/10 p-3.5">
+        <div className="border-t border-divider/10 p-3.5">
           <label className="mb-1.5 block text-[11px] text-pewter">ชื่องาน</label>
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             placeholder="ชื่องาน"
-            className="w-full rounded-xl border border-white/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+            className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
           />
           <label className="mb-1.5 mt-3 block text-[11px] text-pewter">วันที่</label>
           <input
             type="date"
             value={draft.date}
             onChange={(e) => setDraft({ ...draft, date: e.target.value })}
-            className="w-full rounded-xl border border-white/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+            className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
             style={{ colorScheme: 'dark' }}
           />
 
@@ -144,7 +144,7 @@ function EventRow({
                 setCurrentEvent(ev.id)
                 showToast('ตั้งเป็นงานปัจจุบันแล้ว')
               }}
-              className="mt-3.5 w-full rounded-xl border border-white/15 py-2.5 text-[13px] font-medium text-milky"
+              className="mt-3.5 w-full rounded-xl border border-divider/15 py-2.5 text-[13px] font-medium text-milky"
             >
               ตั้งเป็นงานที่กำลังขาย
             </button>
@@ -153,13 +153,13 @@ function EventRow({
           <div className="mt-3 flex gap-2.5">
             <button
               onClick={remove}
-              className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-[#c96b6b]/40 text-[#c96b6b]"
+              className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-danger/40 text-danger"
             >
               <IconTrash width={18} height={18} />
             </button>
             <button
               onClick={save}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-[#2a2115]"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-accent-on"
             >
               <IconCheck width={18} height={18} />
               บันทึก

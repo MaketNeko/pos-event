@@ -4,15 +4,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Luxury Elegant Dark palette
-        ink: '#171719',        // black diamond — main background
-        odyssey: '#364958',    // secondary surface / cards
-        pewter: '#89A6B8',     // muted text / borders
-        milky: '#E8FDFF',      // primary text
-        electrum: '#E7CB9C',   // CTA / accent
-        cacao: '#745C4E',      // secondary accent / hover
-        surface: '#1e2226',
-        'surface-2': '#252b31',
+        ink: 'rgb(var(--c-bg) / <alpha-value>)',
+        surface: 'rgb(var(--c-surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--c-surface2) / <alpha-value>)',
+        milky: 'rgb(var(--c-text) / <alpha-value>)',
+        pewter: 'rgb(var(--c-muted) / <alpha-value>)',
+        electrum: 'rgb(var(--c-accent) / <alpha-value>)',
+        'accent-on': 'rgb(var(--c-accent-on) / <alpha-value>)',
+        divider: 'rgb(var(--c-divider) / <alpha-value>)',
+        danger: 'rgb(var(--c-danger) / <alpha-value>)',
+        odyssey: '#364958',
+        cacao: '#745C4E',
       },
       fontFamily: {
         sans: ['Niramit', 'Inter', 'system-ui', 'sans-serif'],

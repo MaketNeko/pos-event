@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { QRCodeSVG } from 'qrcode.react'
 import { db, uid, getSetting } from '../db'
@@ -124,7 +124,7 @@ export function CheckoutScreen() {
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4">
         {/* product lines */}
         {lines.map((l) => (
-          <div key={l.p.id} className="flex items-center gap-3 border-b border-white/10 py-2.5">
+          <div key={l.p.id} className="flex items-center gap-3 border-b border-divider/10 py-2.5">
             <div className="h-11 w-11 overflow-hidden rounded-xl bg-[#20262b]">
               {l.p.image && <img src={l.p.image} alt={l.p.name} className="h-full w-full object-cover" />}
             </div>
@@ -133,7 +133,7 @@ export function CheckoutScreen() {
               <div className="text-xs text-pewter">{baht(l.p.price)}</div>
             </div>
             <div className="ml-auto flex items-center gap-1.5">
-              <button onClick={() => decCart(l.p.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum">
+              <button onClick={() => decCart(l.p.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum">
                 <IconMinus width={16} height={16} />
               </button>
               <span className="w-6 text-center font-num text-base font-semibold">{l.qty}</span>
@@ -143,7 +143,7 @@ export function CheckoutScreen() {
                   addToCart(l.p.id)
                 }}
                 disabled={l.qty >= l.p.stock}
-                className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum disabled:opacity-40"
+                className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum disabled:opacity-40"
               >
                 <IconPlus width={16} height={16} />
               </button>
@@ -158,7 +158,7 @@ export function CheckoutScreen() {
         {setLines.map((l) => {
           const avail = setAvailable(l.s, products ?? [])
           return (
-            <div key={l.s.id} className="flex items-center gap-3 border-b border-white/10 py-2.5">
+            <div key={l.s.id} className="flex items-center gap-3 border-b border-divider/10 py-2.5">
               <div className="grid h-11 w-11 place-items-center rounded-xl bg-electrum/10 text-electrum">
                 <IconTag width={20} height={20} />
               </div>
@@ -167,7 +167,7 @@ export function CheckoutScreen() {
                 <div className="text-xs text-electrum">เซ็ต · {baht(l.s.price)}</div>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
-                <button onClick={() => decSet(l.s.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum">
+                <button onClick={() => decSet(l.s.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum">
                   <IconMinus width={16} height={16} />
                 </button>
                 <span className="w-6 text-center font-num text-base font-semibold">{l.qty}</span>
@@ -177,7 +177,7 @@ export function CheckoutScreen() {
                     addSet(l.s.id)
                   }}
                   disabled={l.qty >= avail}
-                  className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 text-electrum disabled:opacity-40"
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum disabled:opacity-40"
                 >
                   <IconPlus width={16} height={16} />
                 </button>
@@ -190,7 +190,7 @@ export function CheckoutScreen() {
         })}
 
         {/* summary */}
-        <div className="mt-[18px] rounded-[18px] border border-white/10 bg-surface p-4">
+        <div className="mt-[18px] rounded-[18px] border border-divider/10 bg-surface p-4">
           <div className="mb-2 flex justify-between text-[13px] text-pewter">
             <span>ยอดรวม</span>
             <span className="font-num">{baht(subtotal)}</span>
@@ -212,7 +212,7 @@ export function CheckoutScreen() {
 
           <div className="my-2 flex items-center gap-2">
             <span className="text-[13px] font-medium text-electrum">ส่วนลดท้ายบิล</span>
-            <div className="ml-auto flex items-center overflow-hidden rounded-xl border border-white/20 bg-black/20">
+            <div className="ml-auto flex items-center overflow-hidden rounded-xl border border-divider/20 bg-black/20">
               <input
                 inputMode="numeric"
                 value={discRaw}
@@ -220,8 +220,8 @@ export function CheckoutScreen() {
                 onChange={(e) => setDiscRaw(e.target.value.replace(/[^0-9]/g, ''))}
                 className="w-[74px] bg-transparent px-2 py-2 text-right font-num text-base font-semibold text-milky outline-none placeholder:text-pewter"
               />
-              <button onClick={() => setDiscMode('baht')} className={`h-[37px] w-[34px] border-l border-white/10 text-sm font-semibold ${discMode === 'baht' ? 'bg-electrum text-[#2a2115]' : 'text-pewter'}`}>฿</button>
-              <button onClick={() => setDiscMode('percent')} className={`h-[37px] w-[34px] border-l border-white/10 text-sm font-semibold ${discMode === 'percent' ? 'bg-electrum text-[#2a2115]' : 'text-pewter'}`}>%</button>
+              <button onClick={() => setDiscMode('baht')} className={`h-[37px] w-[34px] border-l border-divider/10 text-sm font-semibold ${discMode === 'baht' ? 'bg-electrum text-accent-on' : 'text-pewter'}`}>฿</button>
+              <button onClick={() => setDiscMode('percent')} className={`h-[37px] w-[34px] border-l border-divider/10 text-sm font-semibold ${discMode === 'percent' ? 'bg-electrum text-accent-on' : 'text-pewter'}`}>%</button>
             </div>
           </div>
 
@@ -232,7 +232,7 @@ export function CheckoutScreen() {
             </div>
           )}
 
-          <div className="mt-1 flex items-baseline justify-between border-t border-dashed border-white/20 pt-3">
+          <div className="mt-1 flex items-baseline justify-between border-t border-dashed border-divider/20 pt-3">
             <span className="text-sm">ยอดสุทธิ</span>
             <span className="font-num text-[26px] font-bold text-milky">{baht(total)}</span>
           </div>
@@ -245,17 +245,17 @@ export function CheckoutScreen() {
         </div>
 
         {method === 'promptpay' ? (
-          <div className="mt-3 rounded-[20px] border border-white/20 bg-gradient-to-b from-[#2b343c] to-[#20262c] p-5 text-center">
+          <div className="mt-3 rounded-[20px] border border-divider/20 bg-surface-2 p-5 text-center">
             <div className="mb-3.5 flex items-center justify-center gap-2">
               <span className="text-[13px] font-bold text-milky">PromptPay</span>
-              <span className="rounded-md bg-electrum px-1.5 py-0.5 text-[9px] font-bold text-[#2a2115]">พร้อมเพย์</span>
+              <span className="rounded-md bg-electrum px-1.5 py-0.5 text-[9px] font-bold text-accent-on">พร้อมเพย์</span>
             </div>
             {payload ? (
               <div className="mx-auto h-[196px] w-[196px] rounded-2xl bg-white p-3.5 shadow-xl">
                 <QRCodeSVG value={payload} className="h-full w-full" />
               </div>
             ) : (
-              <div className="mx-auto flex h-[196px] w-[196px] items-center justify-center rounded-2xl border border-dashed border-white/20 px-6 text-center text-xs text-pewter">
+              <div className="mx-auto flex h-[196px] w-[196px] items-center justify-center rounded-2xl border border-dashed border-divider/20 px-6 text-center text-xs text-pewter">
                 ตั้งค่าเบอร์พร้อมเพย์ก่อน จึงจะสร้าง QR ได้
               </div>
             )}
@@ -263,7 +263,7 @@ export function CheckoutScreen() {
             <div className="mt-1 text-[11px] text-pewter">{promptpay ? `เงินเข้าบัญชี ${promptpay}` : 'ยังไม่ได้ตั้งเบอร์พร้อมเพย์'}</div>
           </div>
         ) : (
-          <div className="mt-3 rounded-[20px] border border-white/20 bg-surface p-6 text-center">
+          <div className="mt-3 rounded-[20px] border border-divider/20 bg-surface p-6 text-center">
             <div className="text-[13px] text-pewter">รับเงินสด</div>
             <div className="mt-1 font-num text-[28px] font-bold text-electrum">{baht(total)}</div>
           </div>
@@ -271,11 +271,11 @@ export function CheckoutScreen() {
       </div>
 
       {/* foot */}
-      <div className="flex gap-2.5 border-t border-white/10 bg-ink px-5 pb-safe pt-3.5">
-        <button onClick={() => go('pos')} className="flex-none rounded-[15px] border border-white/20 px-4 py-3.5 font-medium text-pewter">
+      <div className="flex gap-2.5 border-t border-divider/10 bg-ink px-5 pb-safe pt-3.5">
+        <button onClick={() => go('pos')} className="flex-none rounded-[15px] border border-divider/20 px-4 py-3.5 font-medium text-pewter">
           ยกเลิก
         </button>
-        <button onClick={markPaid} className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-gradient-to-br from-[#EBD4A6] to-[#D9B87C] py-3.5 text-base font-bold text-[#2a2115] shadow-lg">
+        <button onClick={markPaid} className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-electrum py-3.5 text-base font-bold text-accent-on shadow-lg">
           <IconCheck width={20} height={20} />
           {method === 'cash' ? 'รับเงินแล้ว' : 'จ่ายแล้ว'}
         </button>
@@ -299,7 +299,7 @@ function MethodBtn({ active, onClick, icon, label }: { active: boolean; onClick:
     <button
       onClick={onClick}
       className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-3 text-[14px] font-semibold transition ${
-        active ? 'border-electrum bg-electrum text-[#2a2115]' : 'border-white/10 bg-surface text-pewter'
+        active ? 'border-electrum bg-electrum text-accent-on' : 'border-divider/10 bg-surface text-pewter'
       }`}
     >
       {icon}

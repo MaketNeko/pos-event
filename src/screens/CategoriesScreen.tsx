@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -55,7 +55,7 @@ export function CategoriesScreen() {
         right={
           <button
             onClick={addCategory}
-            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-[#2a2115]"
+            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-accent-on"
           >
             <IconPlus width={16} height={16} />
             เพิ่ม
@@ -125,7 +125,7 @@ function CategoryRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`mb-2.5 rounded-2xl border bg-surface ${
-        isDragging ? 'z-10 border-electrum shadow-2xl' : 'border-white/10'
+        isDragging ? 'z-10 border-electrum shadow-2xl' : 'border-divider/10'
       }`}
     >
       <div className="flex items-center gap-2.5 px-3 py-2.5">
@@ -146,7 +146,7 @@ function CategoryRow({
         <button
           onClick={onEdit}
           className={`grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] border ${
-            editing ? 'border-electrum text-electrum' : 'border-white/10 bg-surface-2 text-pewter'
+            editing ? 'border-electrum text-electrum' : 'border-divider/10 bg-surface-2 text-pewter'
           }`}
         >
           <IconPencil width={16} height={16} />
@@ -154,12 +154,12 @@ function CategoryRow({
       </div>
 
       {editing && (
-        <div className="border-t border-white/10 p-3.5">
+        <div className="border-t border-divider/10 p-3.5">
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             placeholder="ชื่อประเภท"
-            className="w-full rounded-xl border border-white/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+            className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
           />
           <div className="mt-3 flex gap-2.5">
             <ColorField label="สีพื้น" value={draft.bg} onChange={(v) => setDraft({ ...draft, bg: v })} />
@@ -169,13 +169,13 @@ function CategoryRow({
           <div className="mt-3.5 flex gap-2.5">
             <button
               onClick={remove}
-              className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-[#c96b6b]/40 text-[#c96b6b]"
+              className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-danger/40 text-danger"
             >
               <IconTrash width={18} height={18} />
             </button>
             <button
               onClick={save}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-[#2a2115]"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-accent-on"
             >
               <IconCheck width={18} height={18} />
               บันทึก
@@ -195,7 +195,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full cursor-pointer rounded-lg border border-white/10 bg-transparent p-0.5"
+        className="h-10 w-full cursor-pointer rounded-lg border border-divider/10 bg-transparent p-0.5"
       />
     </div>
   )

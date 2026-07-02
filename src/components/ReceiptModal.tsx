@@ -1,4 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks'
+﻿import { useLiveQuery } from 'dexie-react-hooks'
 import { getSetting } from '../db'
 import { baht, timeOf } from '../lib/format'
 import { IconX, IconCheck } from './Icons'
@@ -17,7 +17,7 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90%] flex-col rounded-t-3xl border-t border-white/15 bg-surface"
+        className="flex max-h-[90%] flex-col rounded-t-3xl border-t border-divider/15 bg-surface"
       >
         {/* handle + close */}
         <div className="relative flex items-center justify-center pb-1 pt-3">
@@ -37,7 +37,7 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
               <img
                 src={shopImage}
                 alt="ร้าน"
-                className="mx-auto mb-2.5 h-16 w-16 rounded-full border border-white/15 object-cover"
+                className="mx-auto mb-2.5 h-16 w-16 rounded-full border border-divider/15 object-cover"
               />
             )}
             <div className="font-serif text-xl font-semibold text-milky">{shopName || 'NekoPOS'}</div>
@@ -78,7 +78,7 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
             {sale.setDiscount > 0 && <Row k="ส่วนลดโปรเซ็ต" v={`− ${baht(sale.setDiscount)}`} gold />}
             {sale.discount > 0 && <Row k="ส่วนลดท้ายบิล" v={`− ${baht(sale.discount)}`} gold />}
           </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-dashed border-white/20 pt-3">
+          <div className="mt-3 flex items-baseline justify-between border-t border-dashed border-divider/20 pt-3">
             <span className="text-[15px] text-milky">ยอดสุทธิ</span>
             <span className="font-num text-[26px] font-bold text-electrum">{baht(sale.total)}</span>
           </div>
@@ -98,7 +98,7 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
 }
 
 function Dashed() {
-  return <div className="my-4 border-t border-dashed border-white/15" />
+  return <div className="my-4 border-t border-dashed border-divider/15" />
 }
 
 function Row({ k, v, gold }: { k: string; v: string; gold?: boolean }) {

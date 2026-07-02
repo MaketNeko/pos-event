@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useApp } from '../store'
 import { useInstall } from '../lib/pwa'
 import { IconDownload, IconX } from './Icons'
@@ -26,7 +26,7 @@ export function InstallBanner() {
   }
 
   return (
-    <div className="flex flex-none items-center gap-3 border-b border-white/10 bg-gradient-to-r from-[#2c363f] to-[#232a30] px-4 py-2.5 pt-safe">
+    <div className="flex flex-none items-center gap-3 border-b border-divider/10 bg-surface-2 px-4 py-2.5 pt-safe">
       <div className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-electrum/15 text-electrum">
         <IconDownload width={18} height={18} />
       </div>
@@ -37,7 +37,7 @@ export function InstallBanner() {
       {canPrompt ? (
         <button
           onClick={install}
-          className="flex-none rounded-lg bg-electrum px-3 py-1.5 text-[12px] font-semibold text-[#2a2115]"
+          className="flex-none rounded-lg bg-electrum px-3 py-1.5 text-[12px] font-semibold text-accent-on"
         >
           ติดตั้ง
         </button>

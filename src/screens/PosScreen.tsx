@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+﻿import { useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
@@ -77,7 +77,7 @@ export function PosScreen() {
   return (
     <>
       {/* top bar */}
-      <header className="flex items-center gap-3 border-b border-white/10 bg-gradient-to-b from-[#1b1e21] to-transparent px-4 pb-3.5 pt-[38px]">
+      <header className="flex items-center gap-3 border-b border-divider/10 bg-gradient-to-b from-ink to-transparent px-4 pb-3.5 pt-[38px]">
         <ShopAvatar image={shopImage} size={46} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">
@@ -102,13 +102,13 @@ export function PosScreen() {
         </div>
         <button
           onClick={() => go('history')}
-          className="grid h-[42px] w-[42px] place-items-center rounded-xl border border-white/10 bg-surface text-pewter"
+          className="grid h-[42px] w-[42px] place-items-center rounded-xl border border-divider/10 bg-surface text-pewter"
         >
           <IconChart width={20} height={20} />
         </button>
         <button
           onClick={() => go('settings')}
-          className="grid h-[42px] w-[42px] place-items-center rounded-xl border border-white/10 bg-surface text-pewter"
+          className="grid h-[42px] w-[42px] place-items-center rounded-xl border border-divider/10 bg-surface text-pewter"
         >
           <IconGear width={20} height={20} />
         </button>
@@ -177,7 +177,7 @@ export function PosScreen() {
                     style={{ borderTop: '3px solid #E7CB9C' }}
                   >
                     {q > 0 && (
-                      <span className="absolute right-2 top-2 z-10 grid h-6 min-w-[24px] place-items-center rounded-xl bg-electrum px-1.5 text-xs font-bold text-[#2a2115] shadow">
+                      <span className="absolute right-2 top-2 z-10 grid h-6 min-w-[24px] place-items-center rounded-xl bg-electrum px-1.5 text-xs font-bold text-accent-on shadow">
                         {q}
                       </span>
                     )}
@@ -188,7 +188,7 @@ export function PosScreen() {
                       <div className="text-[13px] font-medium leading-tight text-milky">{s.name}</div>
                       <div className="flex items-baseline justify-between gap-1.5">
                         <span className="font-num text-base font-semibold text-electrum">{baht(s.price)}</span>
-                        <span className="rounded-full border border-white/10 px-1.5 py-0.5 text-[10px] text-pewter">
+                        <span className="rounded-full border border-divider/10 px-1.5 py-0.5 text-[10px] text-pewter">
                           {out ? 'หมด' : `เหลือ ${avail}`}
                         </span>
                       </div>
@@ -229,18 +229,18 @@ export function PosScreen() {
                       key={p.id}
                       disabled={out}
                       onClick={() => tap(p.id, p.stock)}
-                      className={`relative flex flex-col overflow-hidden rounded-[18px] border border-white/10 bg-surface text-left transition active:scale-95 disabled:opacity-40 ${
+                      className={`relative flex flex-col overflow-hidden rounded-[18px] border border-divider/10 bg-surface text-left transition active:scale-95 disabled:opacity-40 ${
                         out ? 'pointer-events-none' : ''
                       }`}
                       style={{ borderTop: `3px solid ${c.color}` }}
                     >
                       {q > 0 && (
-                        <span className="absolute right-2 top-2 z-10 grid h-6 min-w-[24px] place-items-center rounded-xl bg-electrum px-1.5 text-xs font-bold text-[#2a2115] shadow">
+                        <span className="absolute right-2 top-2 z-10 grid h-6 min-w-[24px] place-items-center rounded-xl bg-electrum px-1.5 text-xs font-bold text-accent-on shadow">
                           {q}
                         </span>
                       )}
                       {out && (
-                        <span className="absolute left-2 top-2 rounded-lg bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-[#c96b6b]">
+                        <span className="absolute left-2 top-2 rounded-lg bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-danger">
                           หมด
                         </span>
                       )}
@@ -265,7 +265,7 @@ export function PosScreen() {
                             className={`rounded-full border px-1.5 py-0.5 text-[10px] ${
                               p.stock <= 3
                                 ? 'border-[#e7a76c]/30 text-[#E7A76C]'
-                                : 'border-white/10 text-pewter'
+                                : 'border-divider/10 text-pewter'
                             }`}
                           >
                             {out ? 'หมด' : `เหลือ ${p.stock}`}
@@ -283,7 +283,7 @@ export function PosScreen() {
 
       {/* cart bar */}
       <div
-        className={`absolute inset-x-3.5 bottom-[82px] z-[45] flex items-center gap-2.5 rounded-[20px] border border-white/20 bg-gradient-to-br from-[#2c363f] to-[#232a30] py-3 pl-3 pr-3 shadow-2xl transition-transform duration-300 ${
+        className={`absolute inset-x-3.5 bottom-[82px] z-[45] flex items-center gap-2.5 rounded-[20px] border border-divider/20 bg-surface-2 py-3 pl-3 pr-3 shadow-2xl transition-transform duration-300 ${
           count === 0 ? 'translate-y-[160%]' : 'translate-y-0'
         }`}
       >
@@ -291,7 +291,7 @@ export function PosScreen() {
           onClick={() => {
             if (window.confirm('ยกเลิกรายการทั้งหมด?')) clearCart()
           }}
-          className="grid h-11 w-11 flex-none place-items-center rounded-[14px] border border-white/15 text-pewter active:scale-95"
+          className="grid h-11 w-11 flex-none place-items-center rounded-[14px] border border-divider/15 text-pewter active:scale-95"
           aria-label="ยกเลิกรายการ"
         >
           <IconTrash width={18} height={18} />
@@ -302,7 +302,7 @@ export function PosScreen() {
         </div>
         <button
           onClick={() => go('checkout')}
-          className="ml-auto flex items-center gap-2 rounded-[14px] bg-electrum px-5 py-3 font-semibold text-[#2a2115]"
+          className="ml-auto flex items-center gap-2 rounded-[14px] bg-electrum px-5 py-3 font-semibold text-accent-on"
         >
           ชำระเงิน
           <IconArrowRight width={18} height={18} />
@@ -318,8 +318,8 @@ function Tab({ label, active, onClick }: { label: string; active: boolean; onCli
       onClick={onClick}
       className={`flex-none whitespace-nowrap rounded-full border px-4 py-2 text-[13px] font-medium transition ${
         active
-          ? 'border-electrum bg-electrum font-semibold text-[#2a2115]'
-          : 'border-white/10 bg-surface text-pewter'
+          ? 'border-electrum bg-electrum font-semibold text-accent-on'
+          : 'border-divider/10 bg-surface text-pewter'
       }`}
     >
       {label}
@@ -337,7 +337,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       </p>
       <button
         onClick={onAdd}
-        className="rounded-xl bg-electrum px-5 py-3 font-semibold text-[#2a2115]"
+        className="rounded-xl bg-electrum px-5 py-3 font-semibold text-accent-on"
       >
         เพิ่มสินค้า
       </button>

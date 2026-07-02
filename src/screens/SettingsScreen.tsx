@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+﻿import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting, setSetting } from '../db'
@@ -11,6 +11,14 @@ import {
   IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash, IconTag,
 } from '../components/Icons'
 
+const THEMES = [
+  { id: 'dark',   label: 'Dark',    bg: '#171719', accent: '#E7CB9C' },
+  { id: 'light',  label: 'Light',   bg: '#f7f6f4', accent: '#5b4fcf' },
+  { id: 'citrus', label: 'Citrus',  bg: '#fff8f5', accent: '#fd5e4b' },
+  { id: 'veil',   label: 'Veil',    bg: '#f8f7ff', accent: '#9f99d1' },
+  { id: 'oasis',  label: 'Oasis',   bg: '#efeada', accent: '#3b584b' },
+] as const
+
 export function SettingsScreen() {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
@@ -21,6 +29,7 @@ export function SettingsScreen() {
   const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), [])
+  const currentTheme = useLiveQuery(() => getSetting('theme', 'dark'), [])
   const events = useLiveQuery(() => db.events.toArray(), [])
   const productCount = useLiveQuery(() => db.products.count(), [])
   const cats = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
@@ -71,12 +80,50 @@ export function SettingsScreen() {
       <ScreenHeader title="ตั้งค่า" subtitle={shopName || 'ร้านของฉัน'} />
 
       <div className="flex-1 overflow-y-auto px-5 pb-[90px] pt-[18px]">
+
+        <Group title="ธีม">
+          <div className="flex items-center justify-around px-4 py-4">
+            {THEMES.map((t) => {
+              const active = (currentTheme ?? 'dark') === t.id
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => void setSetting('theme', t.id)}
+                  className="flex flex-col items-center gap-1.5"
+                >
+                  <div
+                    className={`relative h-11 w-11 rounded-full border-2 transition-all ${
+                      active ? 'scale-110 border-electrum shadow-lg' : 'border-transparent'
+                    }`}
+                    style={{ background: t.bg }}
+                  >
+                    <span
+                      className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white"
+                      style={{ background: t.accent }}
+                    />
+                    {active && (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                          <path d="M2.5 7L5.5 10L11.5 4" stroke={t.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[10px] font-medium ${active ? 'text-electrum' : 'text-pewter'}`}>
+                    {t.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </Group>
+
         <Group title="ร้าน & การรับเงิน">
           <button
             onClick={() => shopFileRef.current?.click()}
-            className="flex w-full items-center gap-3.5 border-b border-white/10 px-4 py-3.5 text-left active:bg-surface-2"
+            className="flex w-full items-center gap-3.5 border-b border-divider/10 px-4 py-3.5 text-left active:bg-surface-2"
           >
-            <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-full border border-white/15 bg-surface-2 text-pewter">
+            <div className="grid h-12 w-12 flex-none place-items-center overflow-hidden rounded-full border border-divider/15 bg-surface-2 text-pewter">
               {shopImage ? (
                 <img src={shopImage} alt="ร้าน" className="h-full w-full object-cover" />
               ) : (
@@ -95,7 +142,7 @@ export function SettingsScreen() {
                   e.stopPropagation()
                   void setSetting('shopImage', '')
                 }}
-                className="grid h-9 w-9 flex-none place-items-center rounded-lg text-[#c96b6b]"
+                className="grid h-9 w-9 flex-none place-items-center rounded-lg text-danger"
               >
                 <IconTrash width={17} height={17} />
               </span>
@@ -107,7 +154,7 @@ export function SettingsScreen() {
                 <input
                   defaultValue={shopName}
                   onBlur={(e) => setSetting('shopName', e.target.value)}
-                  className="ml-auto w-[150px] rounded-lg border border-white/10 bg-surface-2 px-2.5 py-2 text-right text-[13px] text-milky outline-none focus:border-electrum"
+                  className="ml-auto w-[150px] rounded-lg border border-divider/10 bg-surface-2 px-2.5 py-2 text-right text-[13px] text-milky outline-none focus:border-electrum"
                 />
               </SettingRow>
               <SettingRow
@@ -121,7 +168,7 @@ export function SettingsScreen() {
                   placeholder="เบอร์ / เลขบัตร"
                   onChange={(e) => (e.target.value = e.target.value.replace(/[^0-9]/g, ''))}
                   onBlur={(e) => setSetting('promptpay', e.target.value)}
-                  className="ml-auto w-[150px] rounded-lg border border-white/10 bg-surface-2 px-2.5 py-2 text-right text-[13px] text-milky outline-none focus:border-electrum"
+                  className="ml-auto w-[150px] rounded-lg border border-divider/10 bg-surface-2 px-2.5 py-2 text-right text-[13px] text-milky outline-none focus:border-electrum"
                 />
               </SettingRow>
             </>
@@ -159,7 +206,7 @@ export function SettingsScreen() {
               {(cats ?? []).map((c) => (
                 <span
                   key={c.id}
-                  className="h-[22px] w-[22px] rounded-[7px] border border-white/20"
+                  className="h-[22px] w-[22px] rounded-[7px] border border-divider/20"
                   style={{ background: c.color }}
                 />
               ))}
@@ -245,7 +292,7 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
       <div className="mb-2.5 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-pewter">
         {title}
       </div>
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-surface">{children}</div>
+      <div className="overflow-hidden rounded-2xl border border-divider/10 bg-surface">{children}</div>
     </div>
   )
 }
@@ -263,7 +310,7 @@ function SettingRow({
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3.5 border-b border-white/10 px-4 py-3.5 last:border-b-0 ${
+      className={`flex items-center gap-3.5 border-b border-divider/10 px-4 py-3.5 last:border-b-0 ${
         onClick ? 'cursor-pointer active:bg-surface-2' : ''
       }`}
     >

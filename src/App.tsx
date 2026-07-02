@@ -15,16 +15,25 @@ import { DonateScreen } from './screens/DonateScreen'
 import { InstallScreen } from './screens/InstallScreen'
 import { EventsScreen } from './screens/EventsScreen'
 import { SetsScreen } from './screens/SetsScreen'
+import { DashboardScreen } from './screens/DashboardScreen'
 import { InstallBanner } from './components/InstallBanner'
 import { UpdatePrompt } from './components/UpdatePrompt'
 
-const MAIN = new Set(['pos', 'history', 'settings'])
+const MAIN = new Set(['pos', 'history', 'settings', 'dashboard'])
 
 export default function App() {
   const screen = useApp((s) => s.screen)
   const currentEventId = useApp((s) => s.currentEventId)
   const setCurrentEvent = useApp((s) => s.setCurrentEvent)
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
+  const theme = useLiveQuery(() => getSetting('theme', 'dark'), [])
+
+  // apply theme
+  useEffect(() => {
+    const t = theme ?? 'dark'
+    if (t === 'dark') document.documentElement.removeAttribute('data-theme')
+    else document.documentElement.setAttribute('data-theme', t)
+  }, [theme])
 
   // load saved current event once
   useEffect(() => {
@@ -40,7 +49,7 @@ export default function App() {
   }, [events, currentEventId, setCurrentEvent])
 
   return (
-    <div className="flex h-[100dvh] justify-center bg-[#0e0f10]">
+    <div className="flex h-[100dvh] justify-center bg-ink">
       <div className="relative flex h-full w-full max-w-[430px] flex-col overflow-hidden bg-ink sm:max-w-[600px] md:max-w-[820px]">
         {MAIN.has(screen) && <InstallBanner />}
         {screen === 'pos' && <PosScreen />}
@@ -54,6 +63,7 @@ export default function App() {
         {screen === 'install' && <InstallScreen />}
         {screen === 'events' && <EventsScreen />}
         {screen === 'sets' && <SetsScreen />}
+        {screen === 'dashboard' && <DashboardScreen />}
         {MAIN.has(screen) && <BottomNav />}
         <UpdatePrompt />
         <Toast />

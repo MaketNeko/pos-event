@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
 import { useApp } from '../store'
@@ -132,7 +132,7 @@ function SetRow({
   }
 
   return (
-    <div className={`mb-2.5 rounded-2xl border bg-surface ${editing ? 'border-electrum/40' : 'border-white/10'}`}>
+    <div className={`mb-2.5 rounded-2xl border bg-surface ${editing ? 'border-electrum/40' : 'border-divider/10'}`}>
       <div className="flex items-center gap-3 px-3.5 py-3">
         <span
           className={`flex-none rounded-md px-2 py-0.5 text-[10px] font-semibold ${
@@ -153,7 +153,7 @@ function SetRow({
         <button
           onClick={toggle}
           className={`relative h-6 w-[42px] flex-none rounded-full border transition ${
-            set.active ? 'border-electrum bg-electrum' : 'border-white/10 bg-[#3a4148]'
+            set.active ? 'border-electrum bg-electrum' : 'border-divider/10 bg-[#3a4148]'
           }`}
         >
           <span className={`absolute top-0.5 h-[18px] w-[18px] rounded-full transition-all ${set.active ? 'left-[22px] bg-[#2a2115]' : 'left-0.5 bg-pewter'}`} />
@@ -161,7 +161,7 @@ function SetRow({
         <button
           onClick={onEdit}
           className={`grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] border ${
-            editing ? 'border-electrum text-electrum' : 'border-white/10 bg-surface-2 text-pewter'
+            editing ? 'border-electrum text-electrum' : 'border-divider/10 bg-surface-2 text-pewter'
           }`}
         >
           <IconPencil width={16} height={16} />
@@ -169,17 +169,17 @@ function SetRow({
       </div>
 
       {editing && (
-        <div className="border-t border-white/10 p-3.5">
+        <div className="border-t border-divider/10 p-3.5">
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             placeholder="ชื่อ"
-            className="w-full rounded-xl border border-white/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+            className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
           />
 
           <div className="mt-3 flex items-center gap-3">
             <span className="text-[13px] text-pewter">ราคาเซ็ต</span>
-            <div className="ml-auto flex items-center rounded-xl border border-white/10 bg-surface-2 px-3">
+            <div className="ml-auto flex items-center rounded-xl border border-divider/10 bg-surface-2 px-3">
               <span className="font-num text-electrum">฿</span>
               <input
                 inputMode="numeric"
@@ -194,7 +194,7 @@ function SetRow({
           {!isFixed && (
             <div className="mt-3 flex items-center gap-3">
               <span className="text-[13px] text-pewter">จำนวนต่อเซ็ต</span>
-              <div className="ml-auto flex items-center overflow-hidden rounded-xl border border-white/10">
+              <div className="ml-auto flex items-center overflow-hidden rounded-xl border border-divider/10">
                 <button onClick={() => setDraft({ ...draft, n: Math.max(2, (draft.n ?? 3) - 1) })} className="grid h-9 w-9 place-items-center bg-surface-2 text-electrum">
                   <IconMinus width={16} height={16} />
                 </button>
@@ -209,14 +209,14 @@ function SetRow({
           <div className="mb-2 mt-4 text-[12px] font-medium text-pewter">
             {isFixed ? 'สินค้าในเซ็ต (ตั้งจำนวน)' : 'สินค้าที่ร่วมโปร (เลือกได้หลายอย่าง)'}
           </div>
-          <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-white/10 bg-surface-2 p-2">
+          <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl border border-divider/10 bg-surface-2 p-2">
             {products.length === 0 && <div className="p-2 text-[12px] text-pewter">ยังไม่มีสินค้า</div>}
             {products.map((p) =>
               isFixed ? (
                 <div key={p.id} className="flex items-center gap-2 rounded-lg px-2 py-1">
                   <span className="min-w-0 flex-1 truncate text-[13px]">{p.name}</span>
                   <span className="text-[11px] text-pewter">{baht(p.price)}</span>
-                  <div className="flex items-center overflow-hidden rounded-lg border border-white/10">
+                  <div className="flex items-center overflow-hidden rounded-lg border border-divider/10">
                     <button onClick={() => setComp(p.id, -1)} className="grid h-7 w-7 place-items-center text-electrum">
                       <IconMinus width={14} height={14} />
                     </button>
@@ -234,7 +234,7 @@ function SetRow({
                 >
                   <span
                     className={`grid h-5 w-5 flex-none place-items-center rounded border ${
-                      draft.productIds?.includes(p.id) ? 'border-electrum bg-electrum text-[#2a2115]' : 'border-white/20'
+                      draft.productIds?.includes(p.id) ? 'border-electrum bg-electrum text-accent-on' : 'border-divider/20'
                     }`}
                   >
                     {draft.productIds?.includes(p.id) && <IconCheck width={13} height={13} strokeWidth={3} />}
@@ -247,10 +247,10 @@ function SetRow({
           </div>
 
           <div className="mt-3.5 flex gap-2.5">
-            <button onClick={remove} className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-[#c96b6b]/40 text-[#c96b6b]">
+            <button onClick={remove} className="grid h-11 w-11 flex-none place-items-center rounded-xl border border-danger/40 text-danger">
               <IconTrash width={18} height={18} />
             </button>
-            <button onClick={save} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-[#2a2115]">
+            <button onClick={save} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-electrum py-2.5 font-semibold text-accent-on">
               <IconCheck width={18} height={18} /> บันทึก
             </button>
           </div>

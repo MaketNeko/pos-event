@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid } from '../db'
 import { useApp } from '../store'
@@ -109,7 +109,7 @@ export function AddProductScreen() {
         {/* image */}
         <Field label="รูปสินค้า">
           {image ? (
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-white/10">
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-divider/10">
               <img src={image} alt="preview" className="h-full w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/70 to-transparent p-2.5">
                 <button
@@ -129,7 +129,7 @@ export function AddProductScreen() {
           ) : (
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/20 bg-surface text-pewter"
+              className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-divider/20 bg-surface text-pewter"
             >
               <IconCamera width={34} height={34} />
               <span className="text-[13px]">แตะเพื่อถ่ายรูป / เลือกรูป</span>
@@ -153,12 +153,12 @@ export function AddProductScreen() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="เช่น ชาไทยเย็น"
-            className="w-full rounded-[13px] border border-white/10 bg-surface px-3.5 py-3 text-[15px] text-milky outline-none focus:border-electrum"
+            className="w-full rounded-[13px] border border-divider/10 bg-surface px-3.5 py-3 text-[15px] text-milky outline-none focus:border-electrum"
           />
         </Field>
 
         <Field label="ราคาขาย">
-          <div className="flex items-center rounded-[13px] border border-white/10 bg-surface px-3.5 focus-within:border-electrum">
+          <div className="flex items-center rounded-[13px] border border-divider/10 bg-surface px-3.5 focus-within:border-electrum">
             <span className="font-num text-lg font-semibold text-electrum">฿</span>
             <input
               inputMode="numeric"
@@ -171,7 +171,7 @@ export function AddProductScreen() {
         </Field>
 
         <Field label="สต็อกเริ่มต้น">
-          <div className="flex w-fit items-center overflow-hidden rounded-[13px] border border-white/10">
+          <div className="flex w-fit items-center overflow-hidden rounded-[13px] border border-divider/10">
             <button onClick={() => step(-1)} className="grid h-12 w-12 place-items-center bg-surface text-electrum">
               <IconMinus width={20} height={20} />
             </button>
@@ -196,7 +196,7 @@ export function AddProductScreen() {
                   key={c.id}
                   onClick={() => { setCatId(c.id); setNewCat((n) => ({ ...n, on: false })) }}
                   className={`flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] ${
-                    sel ? 'border-electrum bg-surface-2 text-milky' : 'border-white/10 bg-surface text-pewter'
+                    sel ? 'border-electrum bg-surface-2 text-milky' : 'border-divider/10 bg-surface text-pewter'
                   }`}
                 >
                   <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c.color }} />
@@ -207,7 +207,7 @@ export function AddProductScreen() {
             <button
               onClick={() => setNewCat((n) => ({ ...n, on: !n.on }))}
               className={`rounded-full border border-dashed px-3.5 py-2 text-[13px] ${
-                newCat.on ? 'border-electrum bg-surface-2 text-electrum' : 'border-white/20 text-electrum'
+                newCat.on ? 'border-electrum bg-surface-2 text-electrum' : 'border-divider/20 text-electrum'
               }`}
             >
               ＋ ประเภทใหม่
@@ -215,12 +215,12 @@ export function AddProductScreen() {
           </div>
 
           {newCat.on && (
-            <div className="mt-3 rounded-2xl border border-white/10 bg-surface p-3.5">
+            <div className="mt-3 rounded-2xl border border-divider/10 bg-surface p-3.5">
               <input
                 value={newCat.name}
                 onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
                 placeholder="ชื่อประเภทใหม่"
-                className="w-full rounded-xl border border-white/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+                className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
               />
               <div className="mt-3 flex gap-2.5">
                 <Color label="สีพื้น" v={newCat.bg} on={(v) => setNewCat({ ...newCat, bg: v })} />
@@ -238,25 +238,25 @@ export function AddProductScreen() {
         </Field>
       </div>
 
-      <div className="flex gap-2.5 border-t border-white/10 bg-ink px-5 pb-safe pt-3.5">
+      <div className="flex gap-2.5 border-t border-divider/10 bg-ink px-5 pb-safe pt-3.5">
         {isEdit ? (
           <button
             onClick={remove}
-            className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[15px] border border-[#c96b6b]/40 text-[#c96b6b]"
+            className="grid h-[52px] w-[52px] flex-none place-items-center rounded-[15px] border border-danger/40 text-danger"
           >
             <IconTrash width={20} height={20} />
           </button>
         ) : (
           <button
             onClick={() => go('products')}
-            className="flex-none rounded-[15px] border border-white/20 px-4 py-3.5 font-medium text-pewter"
+            className="flex-none rounded-[15px] border border-divider/20 px-4 py-3.5 font-medium text-pewter"
           >
             ยกเลิก
           </button>
         )}
         <button
           onClick={save}
-          className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-gradient-to-br from-[#EBD4A6] to-[#D9B87C] py-3.5 text-base font-bold text-[#2a2115] shadow-lg"
+          className="flex flex-1 items-center justify-center gap-2 rounded-[15px] bg-electrum py-3.5 text-base font-bold text-accent-on shadow-lg"
         >
           <IconCheck width={20} height={20} />
           {isEdit ? 'บันทึก' : 'บันทึกสินค้า'}
@@ -294,7 +294,7 @@ function Color({ label, v, on }: { label: string; v: string; on: (v: string) => 
         type="color"
         value={v}
         onChange={(e) => on(e.target.value)}
-        className="h-[42px] w-full cursor-pointer rounded-lg border border-white/10 bg-transparent p-0.5"
+        className="h-[42px] w-full cursor-pointer rounded-lg border border-divider/10 bg-transparent p-0.5"
       />
     </div>
   )

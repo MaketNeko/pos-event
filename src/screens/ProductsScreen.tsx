@@ -1,4 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks'
+﻿import { useLiveQuery } from 'dexie-react-hooks'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -28,7 +28,7 @@ export function ProductsScreen() {
         right={
           <button
             onClick={() => go('addProduct')}
-            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-[#2a2115]"
+            className="flex items-center gap-1.5 rounded-xl bg-electrum px-3.5 py-2 text-[13px] font-semibold text-accent-on"
           >
             <IconPlus width={16} height={16} />
             เพิ่ม
@@ -101,7 +101,7 @@ function ProductRow({ product: p }: { product: Product }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={`mb-2.5 flex items-center gap-2.5 rounded-2xl border bg-surface px-3 py-2.5 ${
-        isDragging ? 'z-10 border-electrum shadow-2xl' : 'border-white/10'
+        isDragging ? 'z-10 border-electrum shadow-2xl' : 'border-divider/10'
       } ${!p.active ? 'opacity-50' : ''}`}
     >
       <button
@@ -125,14 +125,14 @@ function ProductRow({ product: p }: { product: Product }) {
         </div>
         <div className="mt-0.5 text-[11px] text-pewter">
           <span className="font-num text-electrum">{baht(p.price)}</span> ·{' '}
-          {out ? <span className="text-[#c96b6b]">ของหมด</span> : `คงเหลือ ${p.stock}`}
+          {out ? <span className="text-danger">ของหมด</span> : `คงเหลือ ${p.stock}`}
         </div>
       </div>
       {/* on/off switch */}
       <button
         onClick={toggle}
         className={`relative h-6 w-[42px] flex-none rounded-full border transition ${
-          p.active ? 'border-electrum bg-electrum' : 'border-white/10 bg-[#3a4148]'
+          p.active ? 'border-electrum bg-electrum' : 'border-divider/10 bg-[#3a4148]'
         }`}
       >
         <span
@@ -143,7 +143,7 @@ function ProductRow({ product: p }: { product: Product }) {
       </button>
       <button
         onClick={() => go('addProduct', p.id)}
-        className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] border border-white/10 bg-surface-2 text-pewter"
+        className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[11px] border border-divider/10 bg-surface-2 text-pewter"
       >
         <IconPencil width={16} height={16} />
       </button>

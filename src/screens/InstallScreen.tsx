@@ -1,4 +1,4 @@
-import { useApp } from '../store'
+﻿import { useApp } from '../store'
 import { useInstall } from '../lib/pwa'
 import { ScreenHeader } from '../components/ScreenHeader'
 import {
@@ -31,7 +31,7 @@ export function InstallScreen() {
             </div>
           </div>
         ) : (
-          <div className="rounded-[22px] border border-white/10 bg-gradient-to-br from-[#2c363f] to-[#232a30] p-6 text-center">
+          <div className="rounded-[22px] border border-divider/10 bg-surface-2 p-6 text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-electrum text-electrum">
               <IconPhone width={28} height={28} />
             </div>
@@ -44,7 +44,7 @@ export function InstallScreen() {
             {canPrompt && (
               <button
                 onClick={install}
-                className="mx-auto mt-5 flex items-center justify-center gap-2 rounded-2xl bg-electrum px-6 py-3 font-semibold text-[#2a2115]"
+                className="mx-auto mt-5 flex items-center justify-center gap-2 rounded-2xl bg-electrum px-6 py-3 font-semibold text-accent-on"
               >
                 <IconDownload width={20} height={20} />
                 ติดตั้งเลย
@@ -59,7 +59,7 @@ export function InstallScreen() {
             <div className="mb-2.5 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-pewter">
               วิธีติดตั้งบน iPhone / iPad
             </div>
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-surface">
+            <div className="overflow-hidden rounded-2xl border border-divider/10 bg-surface">
               <Step n="1" icon={<IconShare width={18} height={18} />} title="กดปุ่ม “แชร์”" sub="ไอคอนสี่เหลี่ยมลูกศรขึ้น ด้านล่างจอ Safari" />
               <Step n="2" icon={<IconPlus width={18} height={18} />} title="เลือก “เพิ่มไปยังหน้าจอโฮม”" sub="เลื่อนหาในเมนูที่เด้งขึ้น" />
               <Step n="3" icon={<IconCheck width={18} height={18} />} title="กด “เพิ่ม”" sub="ไอคอน NekoPOS จะขึ้นหน้าจอโฮม" last />
@@ -72,7 +72,7 @@ export function InstallScreen() {
 
         {/* generic (desktop / other) */}
         {!standalone && !ios && !canPrompt && (
-          <div className="mt-5 rounded-2xl border border-white/10 bg-surface p-4 text-[13px] leading-relaxed text-pewter">
+          <div className="mt-5 rounded-2xl border border-divider/10 bg-surface p-4 text-[13px] leading-relaxed text-pewter">
             เปิดเมนูเบราว์เซอร์ (⋮ มุมขวาบน) แล้วเลือก
             <span className="text-milky"> “ติดตั้งแอป” </span>
             หรือ “เพิ่มไปยังหน้าจอหลัก”
@@ -80,7 +80,7 @@ export function InstallScreen() {
         )}
 
         {/* offline note */}
-        <div className="mt-6 rounded-2xl border border-white/10 bg-surface p-4">
+        <div className="mt-6 rounded-2xl border border-divider/10 bg-surface p-4">
           <div className="text-[13px] font-medium text-milky">ใช้งานออฟไลน์ได้ 100%</div>
           <p className="mt-1 text-[12px] leading-relaxed text-pewter">
             เปิดแอปครั้งแรกตอนมีเน็ต ระบบจะเก็บทุกอย่างไว้ในเครื่อง หลังจากนั้นเปิดใช้หน้างานได้เลย
@@ -102,8 +102,8 @@ function Step({
   last?: boolean
 }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-3.5 ${last ? '' : 'border-b border-white/10'}`}>
-      <div className="grid h-8 w-8 flex-none place-items-center rounded-full bg-electrum text-[13px] font-bold text-[#2a2115]">
+    <div className={`flex items-center gap-3 px-4 py-3.5 ${last ? '' : 'border-b border-divider/10'}`}>
+      <div className="grid h-8 w-8 flex-none place-items-center rounded-full bg-electrum text-[13px] font-bold text-accent-on">
         {n}
       </div>
       <div className="flex-none text-electrum">{icon}</div>
