@@ -105,11 +105,12 @@ export function AddProductScreen() {
         back="products"
       />
 
-      <div className="flex-1 overflow-y-auto px-5 pb-5 pt-[18px]">
-        {/* image */}
+      <div className="flex-1 overflow-y-auto px-5 pb-5 pt-[18px] lg:flex lg:gap-7 lg:overflow-hidden lg:px-8 lg:pt-6">
+        {/* image — left pane on desktop/iPad */}
+        <div className="lg:w-[40%] lg:flex-none">
         <Field label="รูปสินค้า">
           {image ? (
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-divider/10">
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-divider/10 lg:aspect-square">
               <img src={image} alt="preview" className="h-full w-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/70 to-transparent p-2.5">
                 <button
@@ -129,7 +130,7 @@ export function AddProductScreen() {
           ) : (
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-divider/20 bg-surface text-pewter"
+              className="flex aspect-[16/10] w-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-divider/20 bg-surface text-pewter lg:aspect-square"
             >
               <IconCamera width={34} height={34} />
               <span className="text-[13px]">แตะเพื่อถ่ายรูป / เลือกรูป</span>
@@ -147,7 +148,10 @@ export function AddProductScreen() {
             }}
           />
         </Field>
+        </div>
 
+        {/* details — right pane on desktop/iPad */}
+        <div className="lg:flex-1 lg:overflow-y-auto">
         <Field label="ชื่อสินค้า">
           <input
             value={name}
@@ -236,6 +240,7 @@ export function AddProductScreen() {
             </div>
           )}
         </Field>
+        </div>
       </div>
 
       <div className="flex gap-2.5 border-t border-divider/10 bg-ink px-5 pb-safe pt-3.5">
