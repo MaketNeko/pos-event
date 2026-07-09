@@ -5,10 +5,11 @@ import { useApp } from '../store'
 import { baht, timeOf } from '../lib/format'
 import { ReceiptModal } from '../components/ReceiptModal'
 import { ShopAvatar } from '../components/ShopAvatar'
-import { IconDownload, IconChevron, IconCheck } from '../components/Icons'
+import { IconDownload, IconChevron, IconCheck, IconBack } from '../components/Icons'
 import type { Sale } from '../types'
 
 export function HistoryScreen() {
+  const go = useApp((s) => s.go)
   const currentEventId = useApp((s) => s.currentEventId)
   const showToast = useApp((s) => s.showToast)
   const [filter, setFilter] = useState<string>(currentEventId || 'all')
@@ -64,6 +65,12 @@ export function HistoryScreen() {
   return (
     <>
       <header className="flex items-center gap-3 border-b border-divider/10 px-4 pb-4 pt-[38px]">
+        <button
+          onClick={() => go('pos')}
+          className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-divider/10 bg-surface text-milky lg:grid"
+        >
+          <IconBack width={20} height={20} />
+        </button>
         <ShopAvatar image={shopImage} size={44} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">

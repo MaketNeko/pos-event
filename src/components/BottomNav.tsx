@@ -13,7 +13,7 @@ export function BottomNav() {
   const go = useApp((s) => s.go)
 
   return (
-    <nav className="absolute inset-x-0 bottom-0 z-50 flex h-[68px] border-t border-divider/10 bg-ink/90 px-2.5 pt-1.5 backdrop-blur-lg">
+    <nav className="absolute inset-x-0 bottom-0 z-50 flex h-[68px] border-t border-divider/10 bg-ink/90 px-2.5 pt-1.5 backdrop-blur-lg lg:hidden">
       {items.map(({ key, label, Icon }) => {
         const active = screen === key
         return (

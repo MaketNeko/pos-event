@@ -56,6 +56,19 @@
   --c-danger: 220 50 50;
 }
 
+[data-theme="star"] {
+  color-scheme: dark;
+  --c-bg: 11 23 48;
+  --c-surface: 17 30 62;
+  --c-surface2: 24 40 80;
+  --c-text: 245 247 255;
+  --c-muted: 159 179 222;
+  --c-accent: 255 194 0;
+  --c-accent-on: 16 37 75;
+  --c-divider: 255 255 255;
+  --c-danger: 201 107 107;
+}
+
 [data-theme="oasis"] {
   color-scheme: light;
   --c-bg: 239 234 218;

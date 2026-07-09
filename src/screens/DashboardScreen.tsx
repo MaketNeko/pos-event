@@ -4,7 +4,7 @@ import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht } from '../lib/format'
 import { ShopAvatar } from '../components/ShopAvatar'
-import { IconChevron } from '../components/Icons'
+import { IconChevron, IconBack } from '../components/Icons'
 
 // สีวิธีจ่ายเงิน (data-viz เท่านั้น ไม่ใช่ layout)
 const PAY_COLOR = { promptpay: '#5B8AF0', cash: '#F0A05B' } as const
@@ -153,6 +153,7 @@ function PaymentDonut({
 // ---- main screen ----
 
 export function DashboardScreen() {
+  const go = useApp((s) => s.go)
   const currentEventId = useApp((s) => s.currentEventId)
   const [filter, setFilter] = useState<string>(currentEventId || 'all')
   const [metric, setMetric] = useState<Metric>('revenue')
@@ -241,6 +242,12 @@ export function DashboardScreen() {
     <>
       {/* header — ตาม pattern ของ HistoryScreen */}
       <header className="flex items-center gap-3 border-b border-divider/10 px-4 pb-4 pt-[38px]">
+        <button
+          onClick={() => go('pos')}
+          className="hidden h-10 w-10 flex-none place-items-center rounded-xl border border-divider/10 bg-surface text-milky lg:grid"
+        >
+          <IconBack width={20} height={20} />
+        </button>
         <ShopAvatar image={shopImage} size={44} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-serif text-[17px] font-semibold leading-tight text-milky">

@@ -14,8 +14,7 @@ import {
 const THEMES = [
   { id: 'dark',   label: 'Dark',    bg: '#171719', accent: '#E7CB9C' },
   { id: 'light',  label: 'Light',   bg: '#f7f6f4', accent: '#5b4fcf' },
-  { id: 'citrus', label: 'Citrus',  bg: '#fff8f5', accent: '#fd5e4b' },
-  { id: 'veil',   label: 'Veil',    bg: '#f8f7ff', accent: '#9f99d1' },
+  { id: 'star',   label: 'Star ✦',  bg: '#0B1730', accent: '#FFC200' },
   { id: 'oasis',  label: 'Oasis',   bg: '#efeada', accent: '#3b584b' },
 ] as const
 
@@ -77,7 +76,7 @@ export function SettingsScreen() {
 
   return (
     <>
-      <ScreenHeader title="ตั้งค่า" subtitle={shopName || 'ร้านของฉัน'} />
+      <ScreenHeader title="ตั้งค่า" subtitle={shopName || 'ร้านของฉัน'} back="pos" />
 
       <div className="flex-1 overflow-y-auto px-5 pb-[90px] pt-[18px]">
 
