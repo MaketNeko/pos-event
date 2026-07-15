@@ -1,6 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, uid } from '../db'
+import { db, uid, getSetting } from '../db'
 import { useApp } from '../store'
 import { fileToDataURL } from '../lib/image'
 import { CropModal } from '../components/CropModal'
@@ -13,9 +13,13 @@ export function AddProductScreen() {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
   const editId = useApp((s) => s.editProductId)
+  const ownerFilter = useApp((s) => s.ownerFilter)
   const isEdit = !!editId
 
   const cats = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
+  const owners = useLiveQuery(() => db.owners.orderBy('order').toArray(), [])
+  const shopName = useLiveQuery(() => getSetting('shopName'), [])
+  const shopLabel = shopName || 'ของร้าน'
   const editing = useLiveQuery(() => (editId ? db.products.get(editId) : undefined), [editId])
 
   const fileRef = useRef<HTMLInputElement>(null)
@@ -28,6 +32,8 @@ export function AddProductScreen() {
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [catId, setCatId] = useState<string | null>(null)
   const [newCat, setNewCat] = useState({ on: false, name: '', bg: '#364958', text: '#E8FDFF', border: '#E7CB9C' })
+  const [ownerId, setOwnerId] = useState<string | null>(null) // null = ของร้าน
+  const [newOwner, setNewOwner] = useState({ on: false, name: '' })
 
   // prefill when editing
   useEffect(() => {
@@ -38,17 +44,26 @@ export function AddProductScreen() {
       setStock(String(editing.stock))
       setImage(editing.image)
       setCatId(editing.categoryId)
+      setOwnerId(editing.ownerId ?? null)
     }
   }, [isEdit, editing])
 
-  // default category selection for new product
+  // default category for new product
   useEffect(() => {
     if (!isEdit && catId === null && !newCat.on && cats && cats.length) setCatId(cats[0].id)
   }, [isEdit, catId, newCat.on, cats])
 
+  // default owner for new product — ดึงจาก ownerFilter ใน store
+  useEffect(() => {
+    if (isEdit || inited.current) return
+    if (ownerFilter !== 'all' && ownerFilter !== 'none') {
+      setOwnerId(ownerFilter)
+    }
+  }, [isEdit, ownerFilter])
+
   async function pickImage(file: File) {
     try {
-      setCropSrc(await fileToDataURL(file)) // เปิดหน้าครอปก่อนบันทึก
+      setCropSrc(await fileToDataURL(file))
     } catch {
       showToast('อ่านรูปไม่สำเร็จ')
     }
@@ -71,9 +86,20 @@ export function AddProductScreen() {
     }
     if (!categoryId) return showToast('เลือกประเภท')
 
+    // สร้างเจ้าของใหม่ถ้าเลือก inline input
+    let resolvedOwnerId: string | undefined = ownerId ?? undefined
+    if (newOwner.on) {
+      if (!newOwner.name.trim()) return showToast('ใส่ชื่อเจ้าของ')
+      const newId = uid()
+      const order = owners?.length ?? 0
+      await db.owners.add({ id: newId, name: newOwner.name.trim(), order })
+      resolvedOwnerId = newId
+    }
+
     if (isEdit && editId) {
       await db.products.update(editId, {
         name: name.trim(), price: priceN, stock: parseInt(stock) || 0, image, categoryId,
+        ownerId: resolvedOwnerId,
       })
       showToast('บันทึกการแก้ไขแล้ว')
     } else {
@@ -81,6 +107,7 @@ export function AddProductScreen() {
       await db.products.add({
         id: uid(), categoryId, name: name.trim(), price: priceN,
         stock: parseInt(stock) || 0, image, active: true, order,
+        ownerId: resolvedOwnerId,
       })
       showToast('เพิ่มสินค้าแล้ว')
     }
@@ -237,6 +264,56 @@ export function AddProductScreen() {
               >
                 {newCat.name || 'ตัวอย่างประเภท'}
               </div>
+            </div>
+          )}
+        </Field>
+
+        {/* เจ้าของ (ฝากขาย) */}
+        <Field label="เจ้าของ (ฝากขาย)">
+          <div className="flex flex-wrap gap-2">
+            {/* ของร้าน */}
+            <button
+              onClick={() => { setOwnerId(null); setNewOwner({ on: false, name: '' }) }}
+              className={`rounded-full border px-3.5 py-2 text-[13px] ${
+                ownerId === null && !newOwner.on
+                  ? 'border-electrum bg-surface-2 text-milky'
+                  : 'border-divider/10 bg-surface text-pewter'
+              }`}
+            >
+              {shopLabel}
+            </button>
+            {(owners ?? []).map((o) => {
+              const sel = ownerId === o.id && !newOwner.on
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => { setOwnerId(o.id); setNewOwner({ on: false, name: '' }) }}
+                  className={`rounded-full border px-3.5 py-2 text-[13px] ${
+                    sel ? 'border-electrum bg-surface-2 text-milky' : 'border-divider/10 bg-surface text-pewter'
+                  }`}
+                >
+                  {o.name}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => setNewOwner((n) => ({ ...n, on: !n.on }))}
+              className={`rounded-full border border-dashed px-3.5 py-2 text-[13px] ${
+                newOwner.on ? 'border-electrum bg-surface-2 text-electrum' : 'border-divider/20 text-electrum'
+              }`}
+            >
+              ＋ เจ้าของใหม่
+            </button>
+          </div>
+
+          {newOwner.on && (
+            <div className="mt-3 rounded-2xl border border-divider/10 bg-surface p-3.5">
+              <input
+                value={newOwner.name}
+                onChange={(e) => setNewOwner({ ...newOwner, name: e.target.value })}
+                placeholder="ชื่อเจ้าของ / เพื่อน"
+                className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+              />
             </div>
           )}
         </Field>

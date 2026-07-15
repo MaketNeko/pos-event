@@ -29,6 +29,7 @@ export function CheckoutScreen() {
 
   const products = useLiveQuery(() => db.products.toArray(), [])
   const sets = useLiveQuery(() => db.sets.toArray(), [])
+  const owners = useLiveQuery(() => db.owners.toArray(), [])
   const event = useLiveQuery(() => db.events.get(currentEventId), [currentEventId])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), []) ?? ''
 
@@ -75,8 +76,18 @@ export function CheckoutScreen() {
 
   async function markPaid() {
     if (empty) return
+    // สร้าง ownerMap เพื่อ snapshot ชื่อเจ้าของ ณ เวลาขาย
+    const ownerMap = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
     const items: SaleItem[] = [
-      ...lines.map((l) => ({ kind: 'product' as const, refId: l.p.id, name: l.p.name, price: l.p.price, qty: l.qty })),
+      ...lines.map((l) => ({
+        kind: 'product' as const,
+        refId: l.p.id,
+        name: l.p.name,
+        price: l.p.price,
+        qty: l.qty,
+        ownerId: l.p.ownerId,
+        ownerName: l.p.ownerId ? ownerMap[l.p.ownerId] : undefined,
+      })),
       ...setLines.map((l) => ({ kind: 'set' as const, refId: l.s.id, name: l.s.name, price: l.s.price, qty: l.qty })),
     ]
     await db.transaction('rw', db.products, db.sales, async () => {

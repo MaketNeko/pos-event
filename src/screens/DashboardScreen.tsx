@@ -159,6 +159,7 @@ export function DashboardScreen() {
   const [metric, setMetric] = useState<Metric>('revenue')
   const [showAllProducts, setShowAllProducts] = useState(false)
   const [showAllSets, setShowAllSets] = useState(false)
+  const [showAllOwners, setShowAllOwners] = useState(false)
 
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
   const sales = useLiveQuery(() => db.sales.orderBy('createdAt').toArray(), [])
@@ -227,6 +228,23 @@ export function DashboardScreen() {
     (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
   )
   const catTotal = catList.reduce((s, c) => s + (metric === 'revenue' ? c.revenue : c.qty), 0)
+
+  // ---- สรุปตามเจ้าของ (เฉพาะ kind === 'product', ใช้ snapshotted ownerName) ----
+  const SHOP_OWNER_KEY = '__shop__'
+  const ownerAgg: Record<string, TopItem> = {}
+  for (const sale of filteredSales) {
+    for (const item of sale.items) {
+      if (item.kind !== 'product') continue
+      const key = item.ownerId ?? SHOP_OWNER_KEY
+      const name = item.ownerName ?? (shopName || 'ของร้าน')
+      if (!ownerAgg[key]) ownerAgg[key] = { id: key, name, qty: 0, revenue: 0 }
+      ownerAgg[key].qty += item.qty
+      ownerAgg[key].revenue += item.qty * item.price
+    }
+  }
+  const ownerList = Object.values(ownerAgg).sort(
+    (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
+  )
 
   // ---- วิธีจ่ายเงิน ----
   const pay = { promptpay: { revenue: 0, bills: 0 }, cash: { revenue: 0, bills: 0 } }
@@ -390,7 +408,29 @@ export function DashboardScreen() {
               )}
             </Section>
 
-            {/* 5. วิธีจ่ายเงิน */}
+            {/* 5. ยอดขายแยกตามเจ้าของ */}
+            <Section title="ยอดขายแยกตามเจ้าของ">
+              {ownerList.length === 0 ? (
+                <div className="py-3 text-center text-[12px] text-pewter">ไม่มีข้อมูล</div>
+              ) : (
+                <>
+                  <TopList items={ownerList} metric={metric} showAll={showAllOwners} />
+                  {ownerList.length > 5 && (
+                    <button
+                      onClick={() => setShowAllOwners((v) => !v)}
+                      className="mt-3 w-full text-center text-[12px] text-electrum"
+                    >
+                      {showAllOwners
+                        ? 'แสดงน้อยลง'
+                        : `ดูทั้งหมด (${ownerList.length} ราย)`}
+                    </button>
+                  )}
+                  <div className="mt-2 text-[11px] text-pewter">* ไม่รวมยอดที่ขายเป็นเซ็ต</div>
+                </>
+              )}
+            </Section>
+
+            {/* 6. วิธีจ่ายเงิน */}
             <Section title="วิธีจ่ายเงิน">
               <PaymentDonut
                 promptpay={payPromptpay}

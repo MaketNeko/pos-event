@@ -14,12 +14,17 @@ export type Screen =
   | 'events'
   | 'sets'
   | 'dashboard'
+  | 'changelog'
 
 interface AppState {
   // navigation
   screen: Screen
   editProductId: string | null
   go: (s: Screen, editId?: string | null) => void
+
+  // owner filter on products page ('all' | 'none' | ownerId)
+  ownerFilter: string
+  setOwnerFilter: (v: string) => void
 
   // cart: productId -> qty
   cart: Record<string, number>
@@ -47,6 +52,9 @@ export const useApp = create<AppState>((set) => ({
   screen: 'pos',
   editProductId: null,
   go: (screen, editId = null) => set({ screen, editProductId: editId }),
+
+  ownerFilter: 'all',
+  setOwnerFilter: (v) => set({ ownerFilter: v }),
 
   cart: {},
   addToCart: (id) =>

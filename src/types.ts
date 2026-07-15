@@ -1,3 +1,9 @@
+export interface Owner {
+  id: string
+  name: string
+  order: number
+}
+
 export interface Category {
   id: string
   name: string
@@ -17,6 +23,7 @@ export interface Product {
   image?: string // dataURL
   active: boolean // false = ปิดขาย (ซ่อนจากหน้าขาย)
   order: number
+  ownerId?: string // ฝากขาย — id ของเจ้าของ (ไม่มี = ของร้าน)
 }
 
 export interface Event {
@@ -49,6 +56,8 @@ export interface SaleItem {
   name: string
   price: number
   qty: number
+  ownerId?: string    // สแนปชอต ณ เวลาขาย (เฉพาะ kind:'product')
+  ownerName?: string  // สแนปชอต ณ เวลาขาย (เฉพาะ kind:'product')
 }
 
 export interface Sale {

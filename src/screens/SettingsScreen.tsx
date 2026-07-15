@@ -8,7 +8,7 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { CropModal } from '../components/CropModal'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
-  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash, IconTag,
+  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash, IconTag, IconClock,
 } from '../components/Icons'
 
 const THEMES = [
@@ -231,6 +231,13 @@ export function SettingsScreen() {
         </Group>
 
         <Group title="เกี่ยวกับ">
+          <SettingRow
+            icon={<IconClock width={18} height={18} />}
+            label="สรุปการอัปเดต"
+            sub="มีอะไรใหม่ในแอป"
+            onClick={() => go('changelog')}
+            chevron
+          />
           <SettingRow
             icon={<IconDownload width={18} height={18} />}
             label="ติดตั้งแอป / ใช้ออฟไลน์"

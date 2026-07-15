@@ -1,4 +1,5 @@
-﻿import { useLiveQuery } from 'dexie-react-hooks'
+import { useRef, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -7,17 +8,79 @@ import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { db } from '../db'
+import { db, uid, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht } from '../lib/format'
 import { ScreenHeader } from '../components/ScreenHeader'
-import { IconPlus, IconPencil, IconGrip } from '../components/Icons'
-import type { Category, Product } from '../types'
+import { IconPlus, IconPencil, IconGrip, IconCheck, IconTrash } from '../components/Icons'
+import type { Category, Owner, Product } from '../types'
 
 export function ProductsScreen() {
   const go = useApp((s) => s.go)
+  const ownerFilter = useApp((s) => s.ownerFilter)
+  const setOwnerFilter = useApp((s) => s.setOwnerFilter)
+
   const cats = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
   const products = useLiveQuery(() => db.products.orderBy('order').toArray(), [])
+  const owners = useLiveQuery(() => db.owners.orderBy('order').toArray(), [])
+  const shopName = useLiveQuery(() => getSetting('shopName'), [])
+  const shopLabel = shopName || 'ของร้าน'
+
+  // กรองสินค้าตาม ownerFilter
+  const filtered = (products ?? []).filter((p) => {
+    if (ownerFilter === 'all') return true
+    if (ownerFilter === 'none') return !p.ownerId
+    return p.ownerId === ownerFilter
+  })
+
+  // map ownerId -> name สำหรับ badge ในแถวสินค้า
+  const ownerMap = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
+
+  // ---- inline add-owner state ----
+  const [addingOwner, setAddingOwner] = useState(false)
+  const [newOwnerName, setNewOwnerName] = useState('')
+  const newOwnerRef = useRef<HTMLInputElement>(null)
+
+  async function saveNewOwner() {
+    const name = newOwnerName.trim()
+    if (!name) return
+    const id = uid()
+    const order = owners?.length ?? 0
+    await db.owners.add({ id, name, order })
+    setNewOwnerName('')
+    setAddingOwner(false)
+    setOwnerFilter(id) // เลือกเจ้าของใหม่ทันที
+  }
+
+  // ---- inline edit/rename owner state ----
+  const [editingOwnerId, setEditingOwnerId] = useState<string | null>(null)
+  const [editOwnerName, setEditOwnerName] = useState('')
+
+  function startEditOwner(o: Owner) {
+    setEditingOwnerId(o.id)
+    setEditOwnerName(o.name)
+  }
+
+  async function saveEditOwner() {
+    if (!editingOwnerId) return
+    const name = editOwnerName.trim()
+    if (!name) return
+    await db.owners.update(editingOwnerId, { name })
+    setEditingOwnerId(null)
+  }
+
+  async function deleteOwner(o: Owner) {
+    if (!window.confirm(`ลบเจ้าของ "${o.name}" ? สินค้าที่ฝากไว้จะกลายเป็น${shopLabel}`)) return
+    await db.transaction('rw', db.owners, db.products, async () => {
+      await db.owners.delete(o.id)
+      // ล้าง ownerId จากสินค้าทุกชิ้นที่เป็นของเจ้าของนี้
+      const mine = await db.products.where('ownerId').equals(o.id).toArray()
+      for (const p of mine) await db.products.update(p.id, { ownerId: undefined })
+    })
+    setOwnerFilter('all')
+  }
+
+  const selectedOwner = (owners ?? []).find((o) => o.id === ownerFilter) ?? null
 
   return (
     <>
@@ -35,23 +98,152 @@ export function ProductsScreen() {
           </button>
         }
       />
+
+      {/* chip row เลือกเจ้าของ */}
+      <div className="overflow-x-auto border-b border-divider/10 px-5 py-3">
+        <div className="flex min-w-max items-center gap-2">
+          {/* ทั้งหมด */}
+          <button
+            onClick={() => { setOwnerFilter('all'); setAddingOwner(false) }}
+            className={`rounded-full border px-3.5 py-2 text-[13px] ${
+              ownerFilter === 'all'
+                ? 'border-electrum bg-surface-2 text-milky'
+                : 'border-divider/10 bg-surface text-pewter'
+            }`}
+          >
+            ทั้งหมด
+          </button>
+          {/* ของร้าน */}
+          <button
+            onClick={() => { setOwnerFilter('none'); setAddingOwner(false) }}
+            className={`rounded-full border px-3.5 py-2 text-[13px] ${
+              ownerFilter === 'none'
+                ? 'border-electrum bg-surface-2 text-milky'
+                : 'border-divider/10 bg-surface text-pewter'
+            }`}
+          >
+            {shopLabel}
+          </button>
+          {/* chip ต่อเจ้าของ */}
+          {(owners ?? []).map((o) => (
+            <button
+              key={o.id}
+              onClick={() => { setOwnerFilter(o.id); setAddingOwner(false) }}
+              className={`rounded-full border px-3.5 py-2 text-[13px] ${
+                ownerFilter === o.id
+                  ? 'border-electrum bg-surface-2 text-milky'
+                  : 'border-divider/10 bg-surface text-pewter'
+              }`}
+            >
+              {o.name}
+            </button>
+          ))}
+          {/* ＋ เพิ่มเจ้าของ */}
+          <button
+            onClick={() => { setAddingOwner(true); setTimeout(() => newOwnerRef.current?.focus(), 50) }}
+            className={`rounded-full border border-dashed px-3.5 py-2 text-[13px] ${
+              addingOwner ? 'border-electrum text-electrum' : 'border-divider/20 text-electrum'
+            }`}
+          >
+            ＋
+          </button>
+        </div>
+
+        {/* inline add-owner input */}
+        {addingOwner && (
+          <div className="mt-2.5 flex gap-2">
+            <input
+              ref={newOwnerRef}
+              value={newOwnerName}
+              onChange={(e) => setNewOwnerName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void saveNewOwner() }}
+              placeholder="ชื่อเจ้าของ / เพื่อน"
+              className="flex-1 rounded-xl border border-divider/10 bg-surface px-3.5 py-2.5 text-sm text-milky outline-none focus:border-electrum"
+            />
+            <button
+              onClick={() => void saveNewOwner()}
+              className="grid h-[42px] w-[42px] place-items-center rounded-xl bg-electrum text-accent-on"
+            >
+              <IconCheck width={18} height={18} />
+            </button>
+            <button
+              onClick={() => { setAddingOwner(false); setNewOwnerName('') }}
+              className="rounded-xl border border-divider/10 px-3 text-[13px] text-pewter"
+            >
+              ยกเลิก
+            </button>
+          </div>
+        )}
+
+        {/* edit/delete row — แสดงเมื่อเลือก chip เจ้าของ (ไม่ใช่ all/none) */}
+        {selectedOwner && !addingOwner && (
+          <div className="mt-2.5">
+            {editingOwnerId === selectedOwner.id ? (
+              <div className="flex gap-2">
+                <input
+                  value={editOwnerName}
+                  onChange={(e) => setEditOwnerName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void saveEditOwner() }}
+                  className="flex-1 rounded-xl border border-electrum bg-surface px-3.5 py-2 text-sm text-milky outline-none"
+                />
+                <button
+                  onClick={() => void saveEditOwner()}
+                  className="grid h-[38px] w-[38px] place-items-center rounded-xl bg-electrum text-accent-on"
+                >
+                  <IconCheck width={16} height={16} />
+                </button>
+                <button
+                  onClick={() => setEditingOwnerId(null)}
+                  className="rounded-xl border border-divider/10 px-3 text-[13px] text-pewter"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => startEditOwner(selectedOwner)}
+                  className="flex items-center gap-1 text-[12px] text-pewter"
+                >
+                  <IconPencil width={13} height={13} />
+                  แก้ชื่อ
+                </button>
+                <button
+                  onClick={() => void deleteOwner(selectedOwner)}
+                  className="flex items-center gap-1 text-[12px] text-danger"
+                >
+                  <IconTrash width={13} height={13} />
+                  ลบ
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div className="flex-1 overflow-y-auto px-5 pb-[90px] pt-3.5">
-        {products?.length === 0 && (
+        {filtered.length === 0 && (
           <div className="py-16 text-center text-[13px] text-pewter">
-            ยังไม่มีสินค้า — กด “เพิ่ม” มุมขวาบน
+            {products?.length === 0 ? 'ยังไม่มีสินค้า — กด "เพิ่ม" มุมขวาบน' : 'ไม่มีสินค้าในกลุ่มนี้'}
           </div>
         )}
         {(cats ?? []).map((c) => {
-          const items = (products ?? []).filter((p) => p.categoryId === c.id)
+          const items = filtered.filter((p) => p.categoryId === c.id)
           if (items.length === 0) return null
-          return <CategoryGroup key={c.id} category={c} items={items} />
+          return <CategoryGroup key={c.id} category={c} items={items} ownerMap={ownerMap} />
         })}
       </div>
     </>
   )
 }
 
-function CategoryGroup({ category, items }: { category: Category; items: Product[] }) {
+function CategoryGroup({
+  category, items, ownerMap,
+}: {
+  category: Category
+  items: Product[]
+  ownerMap: Record<string, string>
+}) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   async function onDragEnd(e: DragEndEvent) {
@@ -75,7 +267,7 @@ function CategoryGroup({ category, items }: { category: Category; items: Product
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={items.map((p) => p.id)} strategy={verticalListSortingStrategy}>
           {items.map((p) => (
-            <ProductRow key={p.id} product={p} />
+            <ProductRow key={p.id} product={p} ownerMap={ownerMap} />
           ))}
         </SortableContext>
       </DndContext>
@@ -83,13 +275,14 @@ function CategoryGroup({ category, items }: { category: Category; items: Product
   )
 }
 
-function ProductRow({ product: p }: { product: Product }) {
+function ProductRow({ product: p, ownerMap }: { product: Product; ownerMap: Record<string, string> }) {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: p.id,
   })
   const out = p.stock <= 0
+  const ownerName = p.ownerId ? ownerMap[p.ownerId] : undefined
 
   async function toggle() {
     await db.products.update(p.id, { active: !p.active })
@@ -120,6 +313,11 @@ function ProductRow({ product: p }: { product: Product }) {
           {!p.active && (
             <span className="rounded-md bg-[#E0B579]/15 px-1.5 py-px text-[10px] text-[#E0B579]">
               ปิดขาย
+            </span>
+          )}
+          {ownerName && (
+            <span className="rounded-md bg-[#5B8AF0]/15 px-1.5 py-px text-[10px] text-[#5B8AF0]">
+              {ownerName}
             </span>
           )}
         </div>
