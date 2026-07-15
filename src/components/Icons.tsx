@@ -136,6 +136,15 @@ export const IconHeart = (p: SVGProps<SVGSVGElement>) => (
     <path d="M12 20s-7-4.5-9.5-9A4.6 4.6 0 0 1 12 6.5 4.6 4.6 0 0 1 21.5 11C19 15.5 12 20 12 20z" />
   </svg>
 )
+export const IconPaw = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)} strokeWidth={1.7} fill="currentColor" stroke="none">
+    <ellipse cx="6.2" cy="10.5" rx="1.7" ry="2.3" />
+    <ellipse cx="10" cy="7.6" rx="1.7" ry="2.4" />
+    <ellipse cx="14" cy="7.6" rx="1.7" ry="2.4" />
+    <ellipse cx="17.8" cy="10.5" rx="1.7" ry="2.3" />
+    <path d="M12 12.4c2.6 0 4.7 1.7 4.7 3.9 0 1.7-1.4 2.7-3 2.7-.8 0-1.2-.3-1.7-.3s-.9.3-1.7.3c-1.6 0-3-1-3-2.7 0-2.2 2.1-3.9 4.7-3.9z" />
+  </svg>
+)
 export const IconCoffee = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)} strokeWidth={1.7}>
     <path d="M4 8h13v5a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z" />

@@ -4,7 +4,7 @@ import { useApp } from '../store'
 import { baht } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { ScreenHeader } from '../components/ScreenHeader'
-import { IconHeart, IconCoffee, IconCopy, IconDiscord } from '../components/Icons'
+import { IconCoffee, IconCopy, IconDiscord } from '../components/Icons'
 
 // ผู้พัฒนา — ล็อกไว้ตายตัว ไม่แสดงเบอร์ ไม่ให้แก้ไข (แอปนี้ฟรีสำหรับคนขายของ)
 const DONATE_PROMPTPAY = '0973101570'
@@ -28,17 +28,20 @@ export function DonateScreen() {
 
   return (
     <>
-      <ScreenHeader title="สนับสนุนผู้พัฒนา" subtitle="เลี้ยงกาแฟสักแก้ว ☕" back="settings" />
+      <ScreenHeader title="สนับสนุนผู้พัฒนา" subtitle="เลี้ยงมัทฉะสักแก้ว" back="settings" />
 
       <div className="flex-1 overflow-y-auto px-5 pb-8 pt-4">
         {/* hero */}
         <div className="rounded-[22px] border border-divider/10 bg-surface-2 p-6 text-center">
-          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-electrum text-electrum">
-            <IconHeart width={30} height={30} />
-          </div>
-          <h3 className="mt-4 font-serif text-xl font-semibold text-milky">ขอบคุณที่ใช้แอปนี้ 🙏</h3>
+          <img
+            src={`${import.meta.env.BASE_URL}cat-donate.png`}
+            alt="เจ้าเหมียวผู้พัฒนากำลังฝันถึงมัทฉะ"
+            draggable={false}
+            className="mx-auto h-32 w-auto select-none rounded-2xl bg-white/95 p-2"
+          />
+          <h3 className="mt-4 font-serif text-xl font-semibold text-milky">ขอบคุณที่ใช้แอปนี้</h3>
           <p className="mx-auto mt-2 max-w-[280px] text-[13px] leading-relaxed text-pewter">
-            แอปนี้ทำด้วยใจและให้ใช้ฟรีสำหรับพ่อค้าแม่ค้า ถ้าถูกใจ เลี้ยงกาแฟผู้พัฒนาสักแก้วก็ยินดีมากครับ
+            แอปนี้ทำด้วยใจและให้ใช้ฟรีสำหรับพ่อค้าแม่ค้า ถ้าถูกใจ เลี้ยงมัทฉะผู้พัฒนาสักแก้วก็ยินดีมากครับ
             กำลังใจเล็ก ๆ ช่วยให้มีของอัปเดตใหม่ ๆ ต่อไป
           </p>
         </div>
@@ -95,7 +98,7 @@ export function DonateScreen() {
           </button>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-pewter/70">พัฒนาด้วย ❤️ · ขอบคุณครับ</p>
+        <p className="mt-6 text-center text-[11px] text-pewter/70">พัฒนาด้วยใจ · ขอบคุณครับ</p>
       </div>
     </>
   )

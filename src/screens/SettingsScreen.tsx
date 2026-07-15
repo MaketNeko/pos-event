@@ -8,7 +8,7 @@ import { ScreenHeader } from '../components/ScreenHeader'
 import { CropModal } from '../components/CropModal'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
-  IconDatabase, IconUpload, IconChevronRight, IconHeart, IconDownload, IconTrash, IconTag, IconClock,
+  IconDatabase, IconUpload, IconChevronRight, IconPaw, IconDownload, IconTrash, IconTag, IconClock,
 } from '../components/Icons'
 
 const THEMES = [
@@ -246,9 +246,9 @@ export function SettingsScreen() {
             chevron
           />
           <SettingRow
-            icon={<IconHeart width={18} height={18} />}
+            icon={<IconPaw width={18} height={18} />}
             label="สนับสนุนผู้พัฒนา"
-            sub="เลี้ยงกาแฟสักแก้ว ☕"
+            sub="เลี้ยงมัทฉะสักแก้ว"
             onClick={() => go('donate')}
             chevron
           />
