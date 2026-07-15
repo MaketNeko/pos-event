@@ -37,7 +37,7 @@ export function DonateScreen() {
             src={`${import.meta.env.BASE_URL}cat-donate.png`}
             alt="เจ้าเหมียวผู้พัฒนากำลังฝันถึงมัทฉะ"
             draggable={false}
-            className="mx-auto h-32 w-auto select-none rounded-2xl bg-white/95 p-2"
+            className="mx-auto h-32 w-auto select-none"
           />
           <h3 className="mt-4 font-serif text-xl font-semibold text-milky">ขอบคุณที่ใช้แอปนี้</h3>
           <p className="mx-auto mt-2 max-w-[280px] text-[13px] leading-relaxed text-pewter">
