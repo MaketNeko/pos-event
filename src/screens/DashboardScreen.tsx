@@ -164,6 +164,7 @@ export function DashboardScreen() {
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
   const sales = useLiveQuery(() => db.sales.orderBy('createdAt').toArray(), [])
   const products = useLiveQuery(() => db.products.toArray(), [])
+  const owners = useLiveQuery(() => db.owners.toArray(), [])
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
   const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
@@ -229,14 +230,23 @@ export function DashboardScreen() {
   )
   const catTotal = catList.reduce((s, c) => s + (metric === 'revenue' ? c.revenue : c.qty), 0)
 
-  // ---- สรุปตามเจ้าของ (เฉพาะ kind === 'product', ใช้ snapshotted ownerName) ----
+  // ---- สรุปตามเจ้าของ (เฉพาะ kind === 'product') ----
+  // ใช้ snapshot ในบิลก่อน; ถ้าบิลไม่มี (ขายก่อนตั้งเจ้าของ) fallback ไปดูเจ้าของปัจจุบันของสินค้า
   const SHOP_OWNER_KEY = '__shop__'
+  const prodOwnerById = new Map((products ?? []).map((p) => [p.id, p.ownerId]))
+  const ownerNameById = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
   const ownerAgg: Record<string, TopItem> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
       if (item.kind !== 'product') continue
-      const key = item.ownerId ?? SHOP_OWNER_KEY
-      const name = item.ownerName ?? (shopName || 'ของร้าน')
+      let ownerId = item.ownerId
+      let ownerName = item.ownerName
+      if (!ownerId) {
+        const cur = prodOwnerById.get(item.refId)
+        if (cur) { ownerId = cur; ownerName = ownerNameById[cur] }
+      }
+      const key = ownerId ?? SHOP_OWNER_KEY
+      const name = ownerName ?? (shopName || 'ของร้าน')
       if (!ownerAgg[key]) ownerAgg[key] = { id: key, name, qty: 0, revenue: 0 }
       ownerAgg[key].qty += item.qty
       ownerAgg[key].revenue += item.qty * item.price
