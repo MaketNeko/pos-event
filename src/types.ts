@@ -77,3 +77,20 @@ export interface Setting {
   key: string
   value: string
 }
+
+export interface SnapshotData {
+  categories: Category[]
+  products: Product[]
+  events: Event[]
+  sales: Sale[]
+  settings: Setting[]
+  sets: ProductSet[]
+  owners: Owner[]
+}
+
+export interface Backup {
+  id: string
+  createdAt: number // epoch ms
+  reason: 'auto' | 'manual' | 'before-restore'
+  data: SnapshotData
+}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from './db'
+import { autoSnapshot } from './lib/backup'
 import { useApp } from './store'
 import { BottomNav } from './components/BottomNav'
 import { Toast } from './components/Toast'
@@ -35,6 +36,11 @@ export default function App() {
     if (t === 'dark') document.documentElement.removeAttribute('data-theme')
     else document.documentElement.setAttribute('data-theme', t)
   }, [theme])
+
+  // เก็บสแนปช็อตอัตโนมัติตอนเปิดแอป (เว้นระยะ + ข้ามถ้ายังไม่มีข้อมูล)
+  useEffect(() => {
+    void autoSnapshot()
+  }, [])
 
   // load saved current event once
   useEffect(() => {

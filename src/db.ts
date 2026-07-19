@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Category, Product, Event, Sale, Setting, ProductSet, Owner } from './types'
+import type { Category, Product, Event, Sale, Setting, ProductSet, Owner, Backup } from './types'
 
 export class PosDB extends Dexie {
   categories!: Table<Category, string>
@@ -9,6 +9,7 @@ export class PosDB extends Dexie {
   settings!: Table<Setting, string>
   sets!: Table<ProductSet, string>
   owners!: Table<Owner, string>
+  backups!: Table<Backup, string>
 
   constructor() {
     super('pos-event')
@@ -25,6 +26,9 @@ export class PosDB extends Dexie {
     this.version(3).stores({
       owners: 'id, order',
       products: 'id, categoryId, order, active, ownerId',
+    })
+    this.version(4).stores({
+      backups: 'id, createdAt',
     })
   }
 }
