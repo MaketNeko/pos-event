@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import type { SaleItem } from '../types'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht } from '../lib/format'
@@ -71,6 +72,75 @@ function TopList({ items, metric, showAll }: { items: TopItem[]; metric: Metric;
                 {metric === 'revenue' ? `${item.qty} ชิ้น` : baht(item.revenue)}
               </span>
             </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function OwnerBreakdown({
+  items, breakdown, metric, showAll, expanded, onToggle,
+}: {
+  items: TopItem[]
+  breakdown: Record<string, TopItem[]>
+  metric: Metric
+  showAll: boolean
+  expanded: string | null
+  onToggle: (key: string) => void
+}) {
+  const display = showAll ? items : items.slice(0, 5)
+  const maxVal = items.length > 0 ? (metric === 'revenue' ? items[0].revenue : items[0].qty) : 1
+
+  return (
+    <div className="space-y-2.5">
+      {display.map((item) => {
+        const val = metric === 'revenue' ? item.revenue : item.qty
+        const pct = maxVal > 0 ? (val / maxVal) * 100 : 0
+        const open = expanded === item.id
+        const subs = breakdown[item.id] ?? []
+        return (
+          <div key={item.id} className="overflow-hidden rounded-xl border border-divider/10 bg-surface/40">
+            <button onClick={() => onToggle(item.id)} className="w-full px-3 py-2.5 text-left active:bg-surface-2">
+              <div className="mb-1 flex items-baseline gap-1.5">
+                <IconChevron
+                  width={13}
+                  height={13}
+                  className={`flex-none translate-y-[1px] text-pewter transition-transform ${open ? 'rotate-180' : ''}`}
+                />
+                <span className="min-w-0 flex-1 truncate text-[12px] text-milky">{item.name}</span>
+                <span className="flex-none font-num text-[12px] font-semibold text-electrum">
+                  {metric === 'revenue' ? baht(item.revenue) : `${item.qty} ชิ้น`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pl-[19px]">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-divider/10">
+                  <div className="h-full rounded-full bg-electrum transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="w-[56px] flex-none text-right font-num text-[10px] text-pewter">
+                  {metric === 'revenue' ? `${item.qty} ชิ้น` : baht(item.revenue)}
+                </span>
+              </div>
+            </button>
+            {open && (
+              <div className="border-t border-divider/10 bg-black/10 px-3 py-2">
+                {subs.length === 0 ? (
+                  <div className="text-[11px] text-pewter">ไม่มีรายการ</div>
+                ) : (
+                  subs.map((s) => (
+                    <div key={s.id} className="flex items-baseline gap-2 py-0.5">
+                      <span className="min-w-0 flex-1 truncate text-[11px] text-pewter">{s.name}</span>
+                      <span className="flex-none font-num text-[11px] text-milky">
+                        {metric === 'revenue' ? baht(s.revenue) : `${s.qty} ชิ้น`}
+                      </span>
+                      <span className="w-[52px] flex-none text-right font-num text-[10px] text-pewter">
+                        {metric === 'revenue' ? `${s.qty} ชิ้น` : baht(s.revenue)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )
       })}
@@ -160,6 +230,8 @@ export function DashboardScreen() {
   const [showAllProducts, setShowAllProducts] = useState(false)
   const [showAllSets, setShowAllSets] = useState(false)
   const [showAllOwners, setShowAllOwners] = useState(false)
+  const [ownerFilter, setOwnerFilter] = useState<string>('all')
+  const [expandedOwner, setExpandedOwner] = useState<string | null>(null)
 
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
   const sales = useLiveQuery(() => db.sales.orderBy('createdAt').toArray(), [])
@@ -176,17 +248,35 @@ export function DashboardScreen() {
   const totalRevenue = filteredSales.reduce((s, x) => s + x.total, 0)
   const billCount = filteredSales.length
   const totalQty = filteredSales.reduce((s, x) => s + x.items.reduce((a, b) => a + b.qty, 0), 0)
-  const avgPerBill = billCount > 0 ? totalRevenue / billCount : 0
 
   // ---- map สำหรับ join ----
   const productMap = Object.fromEntries((products ?? []).map((p) => [p.id, p]))
   const categoryMap = Object.fromEntries((categories ?? []).map((c) => [c.id, c]))
 
+  // ---- ตัวช่วยหาเจ้าของของ item ----
+  // ใช้ snapshot ในบิลก่อน; ถ้าบิลไม่มี (ขายก่อนตั้งเจ้าของ) fallback ไปดูเจ้าของปัจจุบันของสินค้า
+  const SHOP_OWNER_KEY = '__shop__'
+  const prodOwnerById = new Map((products ?? []).map((p) => [p.id, p.ownerId]))
+  const ownerNameById = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
+  function resolveOwner(item: SaleItem): { key: string; name: string } {
+    let ownerId = item.ownerId
+    let ownerName = item.ownerName
+    if (!ownerId) {
+      const cur = prodOwnerById.get(item.refId)
+      if (cur) { ownerId = cur; ownerName = ownerNameById[cur] }
+    }
+    return { key: ownerId ?? SHOP_OWNER_KEY, name: ownerName ?? (shopName || 'ของร้าน') }
+  }
+  // กรองทั้งหน้าเหลือเฉพาะเจ้าของที่เลือก (เฉพาะสินค้าเดี่ยว; เซ็ตไม่มีเจ้าของ)
+  const ownerScoped = ownerFilter !== 'all'
+  const inScope = (item: SaleItem) =>
+    !ownerScoped || (item.kind === 'product' && resolveOwner(item).key === ownerFilter)
+
   // ---- สรุปสินค้าเดี่ยว (kind === 'product') ----
   const productAgg: Record<string, TopItem> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
-      if (item.kind !== 'product') continue
+      if (item.kind !== 'product' || !inScope(item)) continue
       if (!productAgg[item.refId]) productAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
       productAgg[item.refId].qty += item.qty
       productAgg[item.refId].revenue += item.qty * item.price
@@ -196,11 +286,11 @@ export function DashboardScreen() {
     (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
   )
 
-  // ---- สรุปเซ็ต (kind === 'set') ----
+  // ---- สรุปเซ็ต (kind === 'set') — ไม่แสดงเมื่อกรองรายเจ้าของ ----
   const setAgg: Record<string, TopItem> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
-      if (item.kind !== 'set') continue
+      if (item.kind !== 'set' || ownerScoped) continue
       if (!setAgg[item.refId]) setAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
       setAgg[item.refId].qty += item.qty
       setAgg[item.refId].revenue += item.qty * item.price
@@ -215,7 +305,7 @@ export function DashboardScreen() {
   const catAgg: Record<string, CatEntry> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
-      if (item.kind !== 'product') continue
+      if (item.kind !== 'product' || !inScope(item)) continue
       const prod = productMap[item.refId]
       if (!prod) continue
       const cat = categoryMap[prod.categoryId]
@@ -230,31 +320,55 @@ export function DashboardScreen() {
   )
   const catTotal = catList.reduce((s, c) => s + (metric === 'revenue' ? c.revenue : c.qty), 0)
 
-  // ---- สรุปตามเจ้าของ (เฉพาะ kind === 'product') ----
-  // ใช้ snapshot ในบิลก่อน; ถ้าบิลไม่มี (ขายก่อนตั้งเจ้าของ) fallback ไปดูเจ้าของปัจจุบันของสินค้า
-  const SHOP_OWNER_KEY = '__shop__'
-  const prodOwnerById = new Map((products ?? []).map((p) => [p.id, p.ownerId]))
-  const ownerNameById = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
+  // ---- สรุปตามเจ้าของ + รายสินค้าของแต่ละเจ้าของ (เฉพาะ kind === 'product') ----
   const ownerAgg: Record<string, TopItem> = {}
+  const ownerProdAgg: Record<string, Record<string, TopItem>> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
       if (item.kind !== 'product') continue
-      let ownerId = item.ownerId
-      let ownerName = item.ownerName
-      if (!ownerId) {
-        const cur = prodOwnerById.get(item.refId)
-        if (cur) { ownerId = cur; ownerName = ownerNameById[cur] }
-      }
-      const key = ownerId ?? SHOP_OWNER_KEY
-      const name = ownerName ?? (shopName || 'ของร้าน')
+      const { key, name } = resolveOwner(item)
       if (!ownerAgg[key]) ownerAgg[key] = { id: key, name, qty: 0, revenue: 0 }
       ownerAgg[key].qty += item.qty
       ownerAgg[key].revenue += item.qty * item.price
+      const bucket = (ownerProdAgg[key] ??= {})
+      if (!bucket[item.refId]) bucket[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
+      bucket[item.refId].qty += item.qty
+      bucket[item.refId].revenue += item.qty * item.price
     }
   }
   const ownerList = Object.values(ownerAgg).sort(
     (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
   )
+  const ownerProducts: Record<string, TopItem[]> = {}
+  for (const key in ownerProdAgg) {
+    ownerProducts[key] = Object.values(ownerProdAgg[key]).sort(
+      (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
+    )
+  }
+  const ownerName = ownerScoped
+    ? (ownerFilter === SHOP_OWNER_KEY ? (shopName || 'ของร้าน') : ownerNameById[ownerFilter] ?? 'เจ้าของ')
+    : ''
+
+  // ---- KPI แบบเคารพตัวกรองเจ้าของ ----
+  let scopedRevenue = 0
+  let scopedQty = 0
+  const scopedBills = new Set<string>()
+  if (ownerScoped) {
+    for (const sale of filteredSales) {
+      let hit = false
+      for (const item of sale.items) {
+        if (!inScope(item)) continue
+        scopedRevenue += item.qty * item.price
+        scopedQty += item.qty
+        hit = true
+      }
+      if (hit) scopedBills.add(sale.id)
+    }
+  }
+  const kpiRevenue = ownerScoped ? scopedRevenue : totalRevenue
+  const kpiBills = ownerScoped ? scopedBills.size : billCount
+  const kpiQty = ownerScoped ? scopedQty : totalQty
+  const kpiAvg = kpiBills > 0 ? kpiRevenue / kpiBills : 0
 
   // ---- วิธีจ่ายเงิน ----
   const pay = { promptpay: { revenue: 0, bills: 0 }, cash: { revenue: 0, bills: 0 } }
@@ -305,6 +419,28 @@ export function DashboardScreen() {
           />
         </div>
 
+        {/* dropdown เลือกเจ้าของ — โผล่เฉพาะเมื่อมีเจ้าของฝากขาย */}
+        {(owners ?? []).length > 0 && (
+          <div className="relative mb-4">
+            <select
+              value={ownerFilter}
+              onChange={(e) => { setOwnerFilter(e.target.value); setExpandedOwner(null) }}
+              className="w-full appearance-none rounded-[13px] border border-divider/10 bg-surface py-3 pl-4 pr-10 text-[15px] font-medium text-milky outline-none focus:border-electrum"
+            >
+              <option value="all" className="bg-surface">ทุกเจ้าของ</option>
+              <option value={SHOP_OWNER_KEY} className="bg-surface">{shopName || 'ของร้าน'}</option>
+              {(owners ?? []).map((o) => (
+                <option key={o.id} value={o.id} className="bg-surface">{o.name}</option>
+              ))}
+            </select>
+            <IconChevron
+              width={18}
+              height={18}
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-pewter"
+            />
+          </div>
+        )}
+
         {/* metric toggle — ตาม pattern ฿/% ใน CheckoutScreen */}
         <div className="mb-5 flex items-center justify-between">
           <span className="text-[12px] text-pewter">แสดงผลตาม</span>
@@ -329,12 +465,19 @@ export function DashboardScreen() {
           <div className="py-10 text-center text-[13px] text-pewter">ยังไม่มีรายการขายในงานนี้</div>
         ) : (
           <>
+            {ownerScoped && (
+              <div className="mb-4 rounded-2xl border border-electrum/25 bg-electrum/10 px-4 py-2.5 text-[12px] text-milky">
+                กำลังดูเฉพาะ <span className="font-semibold text-electrum">{ownerName}</span>
+                <span className="text-pewter"> · ไม่รวมยอดที่ขายเป็นเซ็ต</span>
+              </div>
+            )}
+
             {/* 1. KPI cards — 2×2 grid */}
             <div className="mb-4 grid grid-cols-2 gap-3">
-              <KpiCard label="ยอดสุทธิ" value={baht(totalRevenue)} highlight />
-              <KpiCard label="จำนวนบิล" value={`${billCount} บิล`} />
-              <KpiCard label="จำนวนชิ้นรวม" value={`${totalQty} ชิ้น`} />
-              <KpiCard label="ยอดเฉลี่ยต่อบิล" value={baht(Math.round(avgPerBill))} />
+              <KpiCard label="ยอดสุทธิ" value={baht(kpiRevenue)} highlight />
+              <KpiCard label={ownerScoped ? 'จำนวนบิลที่มีของคนนี้' : 'จำนวนบิล'} value={`${kpiBills} บิล`} />
+              <KpiCard label="จำนวนชิ้นรวม" value={`${kpiQty} ชิ้น`} />
+              <KpiCard label="ยอดเฉลี่ยต่อบิล" value={baht(Math.round(kpiAvg))} />
             </div>
 
             {/* 2. สินค้าเดี่ยวขายดี */}
@@ -358,26 +501,28 @@ export function DashboardScreen() {
               )}
             </Section>
 
-            {/* 3. เซ็ต/โปรโมชั่นขายดี */}
-            <Section title="เซ็ต/โปรโมชั่นขายดี">
-              {setList.length === 0 ? (
-                <div className="py-3 text-center text-[12px] text-pewter">ไม่มีข้อมูล</div>
-              ) : (
-                <>
-                  <TopList items={setList} metric={metric} showAll={showAllSets} />
-                  {setList.length > 5 && (
-                    <button
-                      onClick={() => setShowAllSets((v) => !v)}
-                      className="mt-3 w-full text-center text-[12px] text-electrum"
-                    >
-                      {showAllSets
-                        ? 'แสดงน้อยลง'
-                        : `ดูทั้งหมด (${setList.length} รายการ)`}
-                    </button>
-                  )}
-                </>
-              )}
-            </Section>
+            {/* 3. เซ็ต/โปรโมชั่นขายดี — ซ่อนเมื่อกรองรายเจ้าของ (เซ็ตไม่มีเจ้าของ) */}
+            {!ownerScoped && (
+              <Section title="เซ็ต/โปรโมชั่นขายดี">
+                {setList.length === 0 ? (
+                  <div className="py-3 text-center text-[12px] text-pewter">ไม่มีข้อมูล</div>
+                ) : (
+                  <>
+                    <TopList items={setList} metric={metric} showAll={showAllSets} />
+                    {setList.length > 5 && (
+                      <button
+                        onClick={() => setShowAllSets((v) => !v)}
+                        className="mt-3 w-full text-center text-[12px] text-electrum"
+                      >
+                        {showAllSets
+                          ? 'แสดงน้อยลง'
+                          : `ดูทั้งหมด (${setList.length} รายการ)`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </Section>
+            )}
 
             {/* 4. ประเภทขายดี (conic-gradient donut + legend) */}
             <Section title="ประเภทขายดี">
@@ -418,29 +563,39 @@ export function DashboardScreen() {
               )}
             </Section>
 
-            {/* 5. ยอดขายแยกตามเจ้าของ */}
-            <Section title="ยอดขายแยกตามเจ้าของ">
-              {ownerList.length === 0 ? (
-                <div className="py-3 text-center text-[12px] text-pewter">ไม่มีข้อมูล</div>
-              ) : (
-                <>
-                  <TopList items={ownerList} metric={metric} showAll={showAllOwners} />
-                  {ownerList.length > 5 && (
-                    <button
-                      onClick={() => setShowAllOwners((v) => !v)}
-                      className="mt-3 w-full text-center text-[12px] text-electrum"
-                    >
-                      {showAllOwners
-                        ? 'แสดงน้อยลง'
-                        : `ดูทั้งหมด (${ownerList.length} ราย)`}
-                    </button>
-                  )}
-                  <div className="mt-2 text-[11px] text-pewter">* ไม่รวมยอดที่ขายเป็นเซ็ต</div>
-                </>
-              )}
-            </Section>
+            {/* 5. ยอดขายแยกตามเจ้าของ — กดชื่อเพื่อกางดูรายสินค้า (ซ่อนเมื่อกรองรายเจ้าของแล้ว) */}
+            {!ownerScoped && (
+              <Section title="ยอดขายแยกตามเจ้าของ">
+                {ownerList.length === 0 ? (
+                  <div className="py-3 text-center text-[12px] text-pewter">ไม่มีข้อมูล</div>
+                ) : (
+                  <>
+                    <OwnerBreakdown
+                      items={ownerList}
+                      breakdown={ownerProducts}
+                      metric={metric}
+                      showAll={showAllOwners}
+                      expanded={expandedOwner}
+                      onToggle={(k) => setExpandedOwner((cur) => (cur === k ? null : k))}
+                    />
+                    {ownerList.length > 5 && (
+                      <button
+                        onClick={() => setShowAllOwners((v) => !v)}
+                        className="mt-3 w-full text-center text-[12px] text-electrum"
+                      >
+                        {showAllOwners
+                          ? 'แสดงน้อยลง'
+                          : `ดูทั้งหมด (${ownerList.length} ราย)`}
+                      </button>
+                    )}
+                    <div className="mt-2 text-[11px] text-pewter">* แตะชื่อเพื่อดูรายสินค้า · ไม่รวมยอดที่ขายเป็นเซ็ต</div>
+                  </>
+                )}
+              </Section>
+            )}
 
-            {/* 6. วิธีจ่ายเงิน */}
+            {/* 6. วิธีจ่ายเงิน — ซ่อนเมื่อกรองรายเจ้าของ (จ่ายเงินเป็นระดับบิล แยกรายคนไม่ได้) */}
+            {!ownerScoped && (
             <Section title="วิธีจ่ายเงิน">
               <PaymentDonut
                 promptpay={payPromptpay}
@@ -449,6 +604,7 @@ export function DashboardScreen() {
                 total={payTotal}
               />
             </Section>
+            )}
           </>
         )}
       </div>
