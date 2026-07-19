@@ -15,6 +15,7 @@ export type Screen =
   | 'sets'
   | 'dashboard'
   | 'changelog'
+  | 'backups'
 
 interface AppState {
   // navigation

@@ -4,11 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting, setSetting } from '../db'
 import { useApp } from '../store'
 import { fileToDataURL } from '../lib/image'
-import {
-  collectData, applyData, createSnapshot,
-  listSnapshots, restoreSnapshot, deleteSnapshot,
-} from '../lib/backup'
-import type { Backup } from '../types'
+import { collectData, applyData, createSnapshot } from '../lib/backup'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { CropModal } from '../components/CropModal'
 import {
@@ -27,10 +23,8 @@ export function SettingsScreen() {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
   const fileRef = useRef<HTMLInputElement>(null)
-  const mergeFileRef = useRef<HTMLInputElement>(null)
   const shopFileRef = useRef<HTMLInputElement>(null)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
-  const snapshots = useLiveQuery(() => listSnapshots(), [])
 
   const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
@@ -53,31 +47,17 @@ export function SettingsScreen() {
     showToast('สำรองข้อมูลแล้ว')
   }
 
-  // mode: replace = เขียนทับทั้งหมด, merge = รวมทับเฉพาะ id ที่ซ้ำ
-  async function importFile(file: File, mode: 'replace' | 'merge') {
+  // กู้คืน = เขียนทับข้อมูลปัจจุบันทั้งหมด (ยกเว้นจุดสำรองในเครื่อง ซึ่งไม่ถูกแตะ)
+  async function importFile(file: File) {
     try {
       const data = JSON.parse(await file.text())
-      const msg = mode === 'replace'
-        ? 'กู้คืนจะเขียนทับข้อมูลปัจจุบันทั้งหมด ยืนยันหรือไม่?'
-        : 'นำเข้าแบบรวม จะเพิ่ม/อัปเดตทับรายการที่ id ซ้ำ (ไม่ลบของเดิม) ยืนยันหรือไม่?'
-      if (!window.confirm(msg)) return
-      await createSnapshot('before-restore') // เก็บสแนปช็อตกันพลาดก่อนเขียน
-      await applyData(data, mode)
-      showToast(mode === 'replace' ? 'กู้คืนข้อมูลแล้ว' : 'นำเข้า (รวม) แล้ว')
+      if (!window.confirm('กู้คืนจะเขียนทับข้อมูลปัจจุบันทั้งหมด (รวมประวัติการขาย) ยืนยันหรือไม่?')) return
+      await createSnapshot('before-restore') // เก็บจุดย้อนกลับกันพลาดก่อนเขียน
+      await applyData(data)
+      showToast('กู้คืนข้อมูลแล้ว')
     } catch {
       showToast('ไฟล์ไม่ถูกต้อง')
     }
-  }
-
-  async function snapshotNow() {
-    await createSnapshot('manual')
-    showToast('สำรองในเครื่องแล้ว')
-  }
-
-  async function rollback(b: Backup) {
-    if (!window.confirm(`ย้อนกลับไปจุดสำรองนี้? ข้อมูลปัจจุบันจะถูกเขียนทับ\n(${snapLabel(b)})`)) return
-    await restoreSnapshot(b.id)
-    showToast('ย้อนกลับแล้ว')
   }
 
   return (
@@ -235,48 +215,12 @@ export function SettingsScreen() {
             chevron
           />
           <SettingRow
-            icon={<IconUpload width={18} height={18} />}
-            label="นำเข้าแบบรวม"
-            sub="รวมจากไฟล์ ทับเฉพาะ id ซ้ำ (ไม่ลบของเดิม)"
-            onClick={() => mergeFileRef.current?.click()}
+            icon={<IconClock width={18} height={18} />}
+            label="สำรองในเครื่อง"
+            sub="จุดย้อนกลับ · แตะเพื่อจัดการ"
+            onClick={() => go('backups')}
             chevron
           />
-        </Group>
-
-        <Group title="สำรองในเครื่อง (ย้อนกลับได้)">
-          <SettingRow
-            icon={<IconDatabase width={18} height={18} />}
-            label="สำรองตอนนี้"
-            sub="เก็บจุดย้อนกลับไว้ในเครื่อง"
-            onClick={snapshotNow}
-            chevron
-          />
-          {(snapshots ?? []).length === 0 ? (
-            <div className="px-4 py-3.5 text-[11px] text-pewter">
-              ยังไม่มีจุดสำรอง — ระบบจะเก็บอัตโนมัติเมื่อเปิดแอป
-            </div>
-          ) : (
-            (snapshots ?? []).map((b) => (
-              <div
-                key={b.id}
-                className="flex items-center gap-3.5 border-b border-divider/10 px-4 py-3 last:border-b-0"
-              >
-                <div className="grid h-[34px] w-[34px] flex-none place-items-center rounded-[10px] bg-electrum/10 text-electrum">
-                  <IconClock width={16} height={16} />
-                </div>
-                <button onClick={() => void rollback(b)} className="min-w-0 flex-1 text-left active:opacity-70">
-                  <div className="text-sm">{snapLabel(b)}</div>
-                  <div className="mt-px text-[11px] text-pewter">แตะเพื่อย้อนกลับ</div>
-                </button>
-                <button
-                  onClick={() => void deleteSnapshot(b.id)}
-                  className="grid h-9 w-9 flex-none place-items-center rounded-lg text-danger active:bg-surface-2"
-                >
-                  <IconTrash width={16} height={16} />
-                </button>
-              </div>
-            ))
-          )}
         </Group>
 
         <Group title="เกี่ยวกับ">
@@ -310,18 +254,7 @@ export function SettingsScreen() {
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) void importFile(f, 'replace')
-            e.target.value = ''
-          }}
-        />
-        <input
-          ref={mergeFileRef}
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f) void importFile(f, 'merge')
+            if (f) void importFile(f)
             e.target.value = ''
           }}
         />
@@ -350,20 +283,6 @@ export function SettingsScreen() {
       )}
     </>
   )
-}
-
-const REASON_LABEL: Record<Backup['reason'], string> = {
-  auto: 'อัตโนมัติ',
-  manual: 'สำรองเอง',
-  'before-restore': 'ก่อนกู้คืน',
-}
-
-function snapLabel(b: Backup): string {
-  const d = new Date(b.createdAt)
-  const when = d.toLocaleString('th-TH', {
-    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-  })
-  return `${when} · ${REASON_LABEL[b.reason]}`
 }
 
 function Group({ title, children }: { title: string; children: ReactNode }) {

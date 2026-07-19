@@ -26,36 +26,25 @@ export async function collectData(): Promise<SnapshotData> {
 }
 
 /**
- * เขียนข้อมูลกลับเข้า db
- * - replace = ล้างของเดิมแล้วเขียนใหม่ทั้งหมด
- * - merge   = เขียนทับเฉพาะ id ที่ซ้ำ ไม่ลบของเดิมที่ไม่มีในไฟล์
+ * เขียนข้อมูลกลับเข้า db แบบเขียนทับทั้งหมด (ล้างของเดิมแล้วเขียนใหม่)
+ * ไม่แตะตาราง backups — จุดสำรองในเครื่องจึงอยู่รอดข้ามการกู้คืน
  */
-export async function applyData(data: Partial<SnapshotData>, mode: 'replace' | 'merge') {
+export async function applyData(data: Partial<SnapshotData>) {
   await db.transaction(
     'rw',
     [db.categories, db.products, db.events, db.sales, db.settings, db.sets, db.owners],
     async () => {
-      if (mode === 'replace') {
-        await Promise.all([
-          db.categories.clear(), db.products.clear(), db.events.clear(),
-          db.sales.clear(), db.settings.clear(), db.sets.clear(), db.owners.clear(),
-        ])
-        await db.categories.bulkAdd(data.categories ?? [])
-        await db.products.bulkAdd(data.products ?? [])
-        await db.events.bulkAdd(data.events ?? [])
-        await db.sales.bulkAdd(data.sales ?? [])
-        await db.settings.bulkAdd(data.settings ?? [])
-        await db.sets.bulkAdd(data.sets ?? [])
-        await db.owners.bulkAdd(data.owners ?? [])
-      } else {
-        await db.categories.bulkPut(data.categories ?? [])
-        await db.products.bulkPut(data.products ?? [])
-        await db.events.bulkPut(data.events ?? [])
-        await db.sales.bulkPut(data.sales ?? [])
-        await db.settings.bulkPut(data.settings ?? [])
-        await db.sets.bulkPut(data.sets ?? [])
-        await db.owners.bulkPut(data.owners ?? [])
-      }
+      await Promise.all([
+        db.categories.clear(), db.products.clear(), db.events.clear(),
+        db.sales.clear(), db.settings.clear(), db.sets.clear(), db.owners.clear(),
+      ])
+      await db.categories.bulkAdd(data.categories ?? [])
+      await db.products.bulkAdd(data.products ?? [])
+      await db.events.bulkAdd(data.events ?? [])
+      await db.sales.bulkAdd(data.sales ?? [])
+      await db.settings.bulkAdd(data.settings ?? [])
+      await db.sets.bulkAdd(data.sets ?? [])
+      await db.owners.bulkAdd(data.owners ?? [])
     },
   )
 }
@@ -100,7 +89,7 @@ export async function restoreSnapshot(id: string): Promise<boolean> {
   const b = await db.backups.get(id)
   if (!b) return false
   await createSnapshot('before-restore')
-  await applyData(b.data, 'replace')
+  await applyData(b.data)
   return true
 }
 
