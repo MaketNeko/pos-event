@@ -9,7 +9,7 @@
  */
 
 import { initializeApp } from 'firebase/app'
-import { getFirestore } from 'firebase/firestore'
+import { initializeFirestore } from 'firebase/firestore'
 import { getAuth, signInAnonymously, type User } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -23,8 +23,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig)
 
-/** Firestore instance for the booth sync layer (distinct from the local Dexie `db`). */
-export const firestore = getFirestore(app)
+/**
+ * Firestore instance for the booth sync layer (distinct from the local Dexie `db`).
+ * `ignoreUndefinedProperties` so optional fields (e.g. a product's `ownerId` or a
+ * sale item's `ownerName`) that are `undefined` are dropped on write instead of
+ * throwing — Firestore rejects undefined field values.
+ */
+export const firestore = initializeFirestore(app, { ignoreUndefinedProperties: true })
 
 export const auth = getAuth(app)
 
