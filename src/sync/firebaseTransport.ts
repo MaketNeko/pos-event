@@ -120,18 +120,57 @@ export const firebaseTransport: RoomTransport = {
     _ownUid = null
 
     if (!currentRoomCode) return
+    const code = currentRoomCode
+    // Clear module state immediately so no further operations can attach to this room
+    currentRoomCode = null
+
+    // ── Best-effort full wipe of the cloud room ─────────────────────────────
+    // The master's db.sales already holds the union of all pushed sales,
+    // so deleting the cloud sales sub-collection is safe.
+    // We chunk all deletes into batches of ≤ 400 ops to stay within Firestore limits.
+    const BATCH_LIMIT = 400
     try {
-      await setDoc(
-        doc(firestore, 'rooms', currentRoomCode),
-        { closed: true },
-        { merge: true },
-      )
-      console.debug('[firebaseTransport] endRoom → closed room:', currentRoomCode)
+      const subCollections = ['members', 'products', 'meta', 'sales'] as const
+      let batch = writeBatch(firestore)
+      let opCount = 0
+
+      const commitIfFull = async () => {
+        if (opCount >= BATCH_LIMIT) {
+          await batch.commit()
+          batch = writeBatch(firestore)
+          opCount = 0
+        }
+      }
+
+      for (const sub of subCollections) {
+        let snap
+        try {
+          snap = await getDocs(collection(firestore, 'rooms', code, sub))
+        } catch (err) {
+          console.warn(`[firebaseTransport] endRoom: getDocs(${sub}) failed (best-effort):`, err)
+          continue
+        }
+        for (const d of snap.docs) {
+          await commitIfFull()
+          batch.delete(d.ref)
+          opCount++
+        }
+      }
+
+      // Flush remaining sub-collection deletes, then delete the room doc itself
+      if (opCount > 0) {
+        await batch.commit()
+        batch = writeBatch(firestore)
+        opCount = 0
+      }
+
+      batch.delete(doc(firestore, 'rooms', code))
+      await batch.commit()
+
+      console.debug('[firebaseTransport] endRoom → deleted room:', code)
     } catch (err) {
-      // Best-effort — don't throw; let the store reset state regardless
-      console.warn('[firebaseTransport] endRoom failed (best-effort):', err)
-    } finally {
-      currentRoomCode = null
+      // Best-effort — don't throw; teardown must not hang
+      console.warn('[firebaseTransport] endRoom wipe failed (best-effort):', err)
     }
   },
 
@@ -180,11 +219,36 @@ export const firebaseTransport: RoomTransport = {
 
     await batch.commit()
 
-    // Note (Phase 2 stale data): we do NOT delete product docs that were removed
-    // from the local catalog. A product deleted locally will persist as a stale
-    // doc in Firestore until the room is closed. Helpers may see ghost products.
-    // Phase 3 should handle this by diffing or clearing the products sub-collection
-    // before re-pushing.
+    // ── Ghost product cleanup ───────────────────────────────────────────────────
+    // After writing the new product set, delete any existing products/* docs whose
+    // id is NOT in the current snapshot. This prevents helpers from seeing products
+    // the master has deleted or that were renamed with a new id.
+    try {
+      const pushedIds = new Set(firestoreProducts.map((fp) => fp.id))
+      const existingSnap = await getDocs(collection(firestore, 'rooms', code, 'products'))
+      const ghostRefs = existingSnap.docs
+        .filter((d) => !pushedIds.has(d.id))
+        .map((d) => d.ref)
+
+      if (ghostRefs.length > 0) {
+        let ghostBatch = writeBatch(firestore)
+        let ghostOps = 0
+        for (const ref of ghostRefs) {
+          if (ghostOps >= BATCH_LIMIT) {
+            await ghostBatch.commit()
+            ghostBatch = writeBatch(firestore)
+            ghostOps = 0
+          }
+          ghostBatch.delete(ref)
+          ghostOps++
+        }
+        if (ghostOps > 0) await ghostBatch.commit()
+        console.debug('[firebaseTransport] pushCatalog → deleted ghost products:', ghostRefs.length)
+      }
+    } catch (err) {
+      // Best-effort — ghost cleanup failure should not fail the push
+      console.warn('[firebaseTransport] pushCatalog ghost cleanup failed (best-effort):', err)
+    }
 
     console.debug(
       '[firebaseTransport] pushCatalog → room:', code,

@@ -1,15 +1,15 @@
 /**
  * src/screens/BoothScreen.tsx
  *
- * Phase 1 UI for the online-booth feature.
- * All network actions hit the stub localTransport — no real I/O occurs.
- * Phase 2+ will wire up Firebase without changing this screen's interface.
+ * UI for the online-booth feature: choose a role (master/helper), show the
+ * QR + room code, list members (with kick), and safely end/leave the booth.
+ * All network I/O goes through the store actions → RoomTransport (Firebase).
  */
 
 import { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useApp } from '../store'
-import { pendingCount } from '../sync/outbox'
+import { pendingCount, flushOutbox } from '../sync/outbox'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconPhone, IconX, IconTrash } from '../components/Icons'
 import type { BoothMember } from '../sync'
@@ -147,6 +147,43 @@ function MasterLiveView() {
   const sessionSales = useApp((s) => s.sessionSales)
   const endBooth = useApp((s) => s.endBooth)
   const kickMember = useApp((s) => s.kickMember)
+  const republishCatalog = useApp((s) => s.republishCatalog)
+  const showToast = useApp((s) => s.showToast)
+  const [republishing, setRepublishing] = useState(false)
+
+  async function handleEndBooth() {
+    // Step 1: flush outbox and check for pending bills
+    await flushOutbox()
+    const pending = await pendingCount(boothCode)
+    if (pending > 0) {
+      showToast('มีบิลค้าง ' + pending + ' ใบยังไม่ส่งขึ้นคลาวด์ — ต่อเน็ตแล้วลองใหม่')
+      return
+    }
+
+    // Step 2: warn if any helper is offline (may have unpushed bills)
+    const offlineHelpers = boothMembers.filter((m) => m.role !== 'master' && !m.online).length
+    if (offlineHelpers > 0) {
+      if (!window.confirm(
+        'ผู้ช่วย ' + offlineHelpers + ' คนกำลังออฟไลน์ อาจมีบิลที่ยังไม่ซิงค์เข้าเครื่องนี้ ต้องการจบบูธเลยหรือไม่?'
+      )) return
+    }
+
+    // Step 3: final confirmation
+    if (!window.confirm(
+      'จบบูธ? ขายรอบนี้ ' + sessionSales.length + ' บิล ข้อมูลห้องจะถูกลบออกจากคลาวด์ (บิลถูกเก็บในเครื่องนี้แล้ว)'
+    )) return
+
+    await endBooth()
+  }
+
+  async function handleRepublish() {
+    setRepublishing(true)
+    try {
+      await republishCatalog()
+    } finally {
+      setRepublishing(false)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-5">
@@ -170,7 +207,7 @@ function MasterLiveView() {
           {boothCode}
         </div>
         <div className="px-6 text-center text-[11px] text-pewter">
-          ให้ผู้ช่วยสแกน QR ด้วยกล้องมือถือ หรือกรอกรหัสนี้ในหน้า “เข้าร่วมบูธ”
+          ให้ผู้ช่วยสแกน QR ด้วยกล้องมือถือ หรือกรอกรหัสนี้ในหน้า "เข้าร่วมบูธ"
         </div>
       </div>
 
@@ -192,9 +229,18 @@ function MasterLiveView() {
         </div>
       </div>
 
+      {/* Update catalog for helpers */}
+      <button
+        disabled={republishing}
+        onClick={() => void handleRepublish()}
+        className="w-full rounded-2xl border border-divider/15 bg-surface py-3.5 text-sm font-semibold text-milky active:bg-surface-2 disabled:opacity-50"
+      >
+        {republishing ? 'กำลังอัปเดต…' : 'อัปเดตสินค้าให้ผู้ช่วย'}
+      </button>
+
       {/* End booth */}
       <button
-        onClick={() => void endBooth()}
+        onClick={() => void handleEndBooth()}
         className="mt-2 w-full rounded-2xl border border-danger/30 bg-danger/10 py-3.5 text-sm font-semibold text-danger active:bg-danger/20"
       >
         จบบูธ
@@ -251,6 +297,18 @@ function HelperLiveView() {
     return () => { active = false; clearInterval(id) }
   }, [boothCode])
 
+  async function handleLeave() {
+    // Attempt to flush any pending bills first
+    await flushOutbox()
+    const currentPending = await pendingCount(boothCode)
+    if (currentPending > 0) {
+      if (!window.confirm(
+        'ยังมี ' + currentPending + ' บิลที่ยังไม่ส่งขึ้นคลาวด์ ถ้าออกตอนนี้อาจต้องรอส่งภายหลัง ออกเลยหรือไม่?'
+      )) return
+    }
+    await endBooth()
+  }
+
   return (
     <div className="flex flex-col gap-4 px-5 pt-5">
       {/* Status badge + session sales */}
@@ -286,7 +344,7 @@ function HelperLiveView() {
 
       {/* Leave booth */}
       <button
-        onClick={() => void endBooth()}
+        onClick={() => void handleLeave()}
         className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-divider/15 bg-surface py-3.5 text-sm font-semibold text-milky active:bg-surface-2"
       >
         <IconX width={16} height={16} />

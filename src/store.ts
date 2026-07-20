@@ -10,6 +10,25 @@ import type { Sale } from './types'
  * Not exposed in the store interface — cleaned up by endBooth.
  */
 let _catalogUnsub: (() => void) | null = null
+
+// ── Catalog-gathering helper (shared by goLiveAsMaster + republishCatalog) ────
+
+async function gatherCatalogSnapshot(): Promise<CatalogSnapshot> {
+  const [products, categories, sets, owners] = await Promise.all([
+    db.products.toArray(),
+    db.categories.toArray(),
+    db.sets.toArray(),
+    db.owners.toArray(),
+  ])
+  const state = useApp.getState()
+  const currentEventId = state.currentEventId
+  let eventName = ''
+  if (currentEventId) {
+    const ev = await db.events.get(currentEventId)
+    eventName = ev?.name ?? ''
+  }
+  return { products, categories, sets, owners, eventId: currentEventId, eventName }
+}
 let _salesUnsub: (() => void) | null = null
 let _membersUnsub: (() => void) | null = null
 let _selfUnsub: (() => void) | null = null
@@ -93,6 +112,12 @@ interface AppState {
   endBooth: () => Promise<void>
   /** Kick a member from the room (master-only). */
   kickMember: (id: string) => Promise<void>
+  /**
+   * Re-push the current Dexie catalog to Firestore (master-only).
+   * Useful when the master edits products/prices mid-session and wants helpers
+   * to see the updated catalog immediately.
+   */
+  republishCatalog: () => Promise<void>
 
   // owner filter on products page ('all' | 'none' | ownerId)
   ownerFilter: string
@@ -192,24 +217,9 @@ export const useApp = create<AppState>((set) => ({
     try {
       const code = await transport.createRoom()
 
-      // Gather current catalog from Dexie
-      const [products, categories, sets, owners] = await Promise.all([
-        db.products.toArray(),
-        db.categories.toArray(),
-        db.sets.toArray(),
-        db.owners.toArray(),
-      ])
-
-      // Resolve current event name (best-effort; empty string if not set)
-      const state = useApp.getState()
-      const currentEventId = state.currentEventId
-      let eventName = ''
-      if (currentEventId) {
-        const ev = await db.events.get(currentEventId)
-        eventName = ev?.name ?? ''
-      }
-
-      await transport.pushCatalog({ products, categories, sets, owners, eventId: currentEventId, eventName })
+      // Gather current catalog from Dexie and push to the cloud room
+      const catalogSnapshot = await gatherCatalogSnapshot()
+      await transport.pushCatalog(catalogSnapshot)
 
       // ── Membership (Phase 4) ─────────────────────────────────────────
       const masterName = (await getSetting('shopName', '')) || 'เครื่องหลัก'
@@ -351,7 +361,7 @@ export const useApp = create<AppState>((set) => ({
   },
 
   endBooth: async () => {
-    const role = useApp.getState().boothRole
+    const { boothRole: role, boothCode: code } = useApp.getState()
     // Tear down all subscriptions
     if (_membersUnsub) { _membersUnsub(); _membersUnsub = null }
     if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
@@ -362,7 +372,19 @@ export const useApp = create<AppState>((set) => ({
     await transport.leaveMember()
     // Only the MASTER closes the room. A helper leaving (or being kicked)
     // must NOT close the room for everyone else.
-    if (role === 'master') await transport.endRoom()
+    if (role === 'master') {
+      await transport.endRoom()
+      // Clean up this room's outbox rows — the master's db.sales already holds
+      // all pushed sales, so locally-queued entries for this code are no longer needed.
+      if (code) {
+        try {
+          await db.outbox.where('roomCode').equals(code).delete()
+          console.debug('[store] endBooth: cleared outbox for room', code)
+        } catch (err) {
+          console.warn('[store] endBooth: outbox cleanup failed (best-effort):', err)
+        }
+      }
+    }
     set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [], remoteCatalog: null, sessionSales: [] })
   },
 
@@ -370,5 +392,18 @@ export const useApp = create<AppState>((set) => ({
     // TODO(phase 2+): master-only; the Firebase transport will enforce this server-side
     await transport.kickMember(id)
     set((s) => ({ boothMembers: s.boothMembers.filter((m) => m.id !== id) }))
+  },
+
+  republishCatalog: async () => {
+    const { boothRole, showToast } = useApp.getState()
+    if (boothRole !== 'master') return
+    try {
+      const snapshot = await gatherCatalogSnapshot()
+      await transport.pushCatalog(snapshot)
+      showToast('อัปเดตสินค้าให้ผู้ช่วยแล้ว')
+    } catch (err) {
+      console.error('[store] republishCatalog failed:', err)
+      showToast('อัปเดตสินค้าไม่สำเร็จ — ลองใหม่อีกครั้ง')
+    }
   },
 }))
