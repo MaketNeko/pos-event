@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { QRCodeSVG } from 'qrcode.react'
 import { db, uid, getSetting } from '../db'
 import { useApp } from '../store'
+import { useCatalogData } from '../sync/useCatalog'
 import { baht, thaiDate } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { computeMix, setAvailable } from '../lib/sets'
@@ -27,9 +28,7 @@ export function CheckoutScreen() {
   const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
 
-  const products = useLiveQuery(() => db.products.toArray(), [])
-  const sets = useLiveQuery(() => db.sets.toArray(), [])
-  const owners = useLiveQuery(() => db.owners.toArray(), [])
+  const { products, sets, owners } = useCatalogData()
   const event = useLiveQuery(() => db.events.get(currentEventId), [currentEventId])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), []) ?? ''
 
@@ -41,7 +40,7 @@ export function CheckoutScreen() {
   const lines = useMemo<Line[]>(() => {
     const out: Line[] = []
     for (const [id, qty] of Object.entries(cart)) {
-      const p = products?.find((x) => x.id === id)
+      const p = products.find((x) => x.id === id)
       if (p) out.push({ p, qty })
     }
     return out
@@ -50,14 +49,14 @@ export function CheckoutScreen() {
   const setLines = useMemo<SetLine[]>(() => {
     const out: SetLine[] = []
     for (const [id, qty] of Object.entries(setCart)) {
-      const s = sets?.find((x) => x.id === id)
+      const s = sets.find((x) => x.id === id)
       if (s) out.push({ s, qty })
     }
     return out
   }, [setCart, sets])
 
-  const mixSets = (sets ?? []).filter((s) => s.type === 'mix' && s.active)
-  const mix = computeMix(mixSets, cart, products ?? [])
+  const mixSets = sets.filter((s) => s.type === 'mix' && s.active)
+  const mix = computeMix(mixSets, cart, products)
 
   const prodSubtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0)
   const setSubtotal = setLines.reduce((s, l) => s + l.s.price * l.qty, 0)
@@ -77,7 +76,7 @@ export function CheckoutScreen() {
   async function markPaid() {
     if (empty) return
     // สร้าง ownerMap เพื่อ snapshot ชื่อเจ้าของ ณ เวลาขาย
-    const ownerMap = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
+    const ownerMap = Object.fromEntries(owners.map((o) => [o.id, o.name]))
     const items: SaleItem[] = [
       ...lines.map((l) => ({
         kind: 'product' as const,
@@ -167,7 +166,7 @@ export function CheckoutScreen() {
 
         {/* set lines */}
         {setLines.map((l) => {
-          const avail = setAvailable(l.s, products ?? [])
+          const avail = setAvailable(l.s, products)
           return (
             <div key={l.s.id} className="flex items-center gap-3 border-b border-divider/10 py-2.5">
               <div className="grid h-11 w-11 place-items-center rounded-xl bg-electrum/10 text-electrum">

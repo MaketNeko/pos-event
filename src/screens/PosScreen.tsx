@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { QRCodeSVG } from 'qrcode.react'
 import { db, getSetting, uid } from '../db'
 import { useApp } from '../store'
+import { useCatalogData } from '../sync/useCatalog'
 import { baht, thaiDate } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { computeMix, setAvailable } from '../lib/sets'
@@ -37,10 +38,8 @@ export function PosScreen() {
   const currentEventId = useApp((s) => s.currentEventId)
   const setCurrentEvent = useApp((s) => s.setCurrentEvent)
 
-  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray(), [])
-  const products = useLiveQuery(() => db.products.orderBy('order').toArray(), [])
+  const { categories, products, sets, isHelper, eventName: remoteEventName } = useCatalogData()
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
-  const sets = useLiveQuery(() => db.sets.orderBy('order').toArray(), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
   const shopImage = useLiveQuery(() => getSetting('shopImage'), [])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), []) ?? ''
@@ -55,9 +54,9 @@ export function PosScreen() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({})
 
-  const onSale = (pid: string) => products?.find((p) => p.id === pid)
-  const activeFixed = (sets ?? []).filter((s) => s.type === 'fixed' && s.active)
-  const mixSets = (sets ?? []).filter((s) => s.type === 'mix' && s.active)
+  const onSale = (pid: string) => products.find((p) => p.id === pid)
+  const activeFixed = sets.filter((s) => s.type === 'fixed' && s.active)
+  const mixSets = sets.filter((s) => s.type === 'mix' && s.active)
   const count =
     Object.values(cart).reduce((a, b) => a + b, 0) +
     Object.values(setCart).reduce((a, b) => a + b, 0)
@@ -65,15 +64,15 @@ export function PosScreen() {
   const total = useMemo(() => {
     const prod = Object.entries(cart).reduce((s, [id, q]) => s + q * (onSale(id)?.price ?? 0), 0)
     const set = Object.entries(setCart).reduce(
-      (s, [id, q]) => s + q * ((sets ?? []).find((x) => x.id === id)?.price ?? 0),
+      (s, [id, q]) => s + q * (sets.find((x) => x.id === id)?.price ?? 0),
       0,
     )
     return prod + set
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart, setCart, products, sets])
 
-  const visibleCats = (categories ?? []).filter((c) =>
-    (products ?? []).some((p) => p.categoryId === c.id && p.active),
+  const visibleCats = categories.filter((c) =>
+    products.some((p) => p.categoryId === c.id && p.active),
   )
 
   const event = events?.find((e) => e.id === currentEventId)
@@ -82,7 +81,7 @@ export function PosScreen() {
   const lines = useMemo<Line[]>(() => {
     const out: Line[] = []
     for (const [id, qty] of Object.entries(cart)) {
-      const p = products?.find((x) => x.id === id)
+      const p = products.find((x) => x.id === id)
       if (p) out.push({ p, qty })
     }
     return out
@@ -91,13 +90,13 @@ export function PosScreen() {
   const setLines = useMemo<SetLine[]>(() => {
     const out: SetLine[] = []
     for (const [id, qty] of Object.entries(setCart)) {
-      const s = sets?.find((x) => x.id === id)
+      const s = sets.find((x) => x.id === id)
       if (s) out.push({ s, qty })
     }
     return out
   }, [setCart, sets])
 
-  const mix = computeMix(mixSets, cart, products ?? [])
+  const mix = computeMix(mixSets, cart, products)
   const afterMix = Math.max(0, total - mix.discount)
   const wideDiscount = useMemo(() => {
     const v = Math.max(0, parseFloat(discRaw) || 0)
@@ -182,20 +181,28 @@ export function PosScreen() {
               {shopName || 'NekoPOS'}
             </div>
             <div className="flex items-center gap-1">
-              <select
-                value={currentEventId}
-                onChange={(e) => setCurrentEvent(e.target.value)}
-                className="max-w-[62%] truncate bg-transparent text-[13px] font-medium text-electrum outline-none"
-              >
-                {(events ?? []).map((e) => (
-                  <option key={e.id} value={e.id} className="bg-surface text-milky">
-                    {e.name}
-                  </option>
-                ))}
-              </select>
-              <span className="truncate text-[11px] text-pewter">
-                · {event ? thaiDate(event.date) : '—'}
-              </span>
+              {isHelper ? (
+                <span className="max-w-[62%] truncate text-[13px] font-medium text-electrum">
+                  {remoteEventName || '—'}
+                </span>
+              ) : (
+                <select
+                  value={currentEventId}
+                  onChange={(e) => setCurrentEvent(e.target.value)}
+                  className="max-w-[62%] truncate bg-transparent text-[13px] font-medium text-electrum outline-none"
+                >
+                  {(events ?? []).map((e) => (
+                    <option key={e.id} value={e.id} className="bg-surface text-milky">
+                      {e.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {!isHelper && (
+                <span className="truncate text-[11px] text-pewter">
+                  · {event ? thaiDate(event.date) : '—'}
+                </span>
+              )}
             </div>
           </div>
           {/* mobile: history + settings */}
@@ -279,7 +286,7 @@ export function PosScreen() {
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {activeFixed.map((s) => {
-                  const avail = setAvailable(s, products ?? [])
+                  const avail = setAvailable(s, products)
                   const q = setCart[s.id] ?? 0
                   const out = avail <= 0
                   return (
@@ -315,7 +322,7 @@ export function PosScreen() {
           )}
 
           {visibleCats.map((c) => {
-            const items = (products ?? []).filter((p) => p.categoryId === c.id && p.active)
+            const items = (products).filter((p) => p.categoryId === c.id && p.active)
             return (
               <section
                 key={c.id}
@@ -441,7 +448,7 @@ export function PosScreen() {
                 </div>
               ))}
               {setLines.map((l) => {
-                const avail = setAvailable(l.s, products ?? [])
+                const avail = setAvailable(l.s, products)
                 return (
                   <div key={l.s.id} className="flex items-center gap-2.5 border-b border-divider/10 py-2.5">
                     <div className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-electrum/10 text-electrum">
