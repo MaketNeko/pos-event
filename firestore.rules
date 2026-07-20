@@ -53,10 +53,12 @@ service cloud.firestore {
       }
 
       // Sales log: members may read and append. create/update both allowed so
-      // the offline outbox can retry the same sale id idempotently. No deletes.
+      // the offline outbox can retry the same sale id idempotently. Only the
+      // master may delete (needed to wipe the room when the booth ends).
       match /sales/{saleId} {
         allow read: if isMember();
         allow create, update: if isMember();
+        allow delete: if isMaster();
       }
     }
   }

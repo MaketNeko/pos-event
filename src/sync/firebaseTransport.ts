@@ -127,50 +127,36 @@ export const firebaseTransport: RoomTransport = {
     // ── Best-effort full wipe of the cloud room ─────────────────────────────
     // The master's db.sales already holds the union of all pushed sales,
     // so deleting the cloud sales sub-collection is safe.
-    // We chunk all deletes into batches of ≤ 400 ops to stay within Firestore limits.
+    // Each sub-collection is wiped in its OWN try/catch (chunks of ≤ 400) so one
+    // failing collection doesn't block the others, and the room doc is deleted
+    // last in its own try so it disappears even if a sub-collection wipe failed.
     const BATCH_LIMIT = 400
-    try {
-      const subCollections = ['members', 'products', 'meta', 'sales'] as const
-      let batch = writeBatch(firestore)
-      let opCount = 0
-
-      const commitIfFull = async () => {
-        if (opCount >= BATCH_LIMIT) {
-          await batch.commit()
-          batch = writeBatch(firestore)
-          opCount = 0
-        }
-      }
-
-      for (const sub of subCollections) {
-        let snap
-        try {
-          snap = await getDocs(collection(firestore, 'rooms', code, sub))
-        } catch (err) {
-          console.warn(`[firebaseTransport] endRoom: getDocs(${sub}) failed (best-effort):`, err)
-          continue
-        }
+    const subCollections = ['members', 'products', 'meta', 'sales'] as const
+    for (const sub of subCollections) {
+      try {
+        const snap = await getDocs(collection(firestore, 'rooms', code, sub))
+        let batch = writeBatch(firestore)
+        let opCount = 0
         for (const d of snap.docs) {
-          await commitIfFull()
           batch.delete(d.ref)
           opCount++
+          if (opCount >= BATCH_LIMIT) {
+            await batch.commit()
+            batch = writeBatch(firestore)
+            opCount = 0
+          }
         }
+        if (opCount > 0) await batch.commit()
+      } catch (err) {
+        console.warn(`[firebaseTransport] endRoom: wipe ${sub} failed (best-effort):`, err)
       }
+    }
 
-      // Flush remaining sub-collection deletes, then delete the room doc itself
-      if (opCount > 0) {
-        await batch.commit()
-        batch = writeBatch(firestore)
-        opCount = 0
-      }
-
-      batch.delete(doc(firestore, 'rooms', code))
-      await batch.commit()
-
+    try {
+      await deleteDoc(doc(firestore, 'rooms', code))
       console.debug('[firebaseTransport] endRoom → deleted room:', code)
     } catch (err) {
-      // Best-effort — don't throw; teardown must not hang
-      console.warn('[firebaseTransport] endRoom wipe failed (best-effort):', err)
+      console.warn('[firebaseTransport] endRoom: delete room doc failed (best-effort):', err)
     }
   },
 
