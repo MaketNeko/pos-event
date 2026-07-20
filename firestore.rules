@@ -1,11 +1,63 @@
 rules_version = '2';
+
+// NekoPOS — online booth mode (Phase 4b hardened rules)
+//
+// Access is scoped per room. A device must be signed in (anonymous auth) to
+// read a room doc (needed to validate a code before joining). Reading the
+// catalog/sales and listing members requires being in that room's member
+// list. Only the master (the uid that created the room) may write the
+// catalog or close the room. A user manages only their own member doc; the
+// master may delete (kick) any member.
 service cloud.firestore {
   match /databases/{database}/documents {
-    // INTERIM DEV RULES (Phase 2)
-    // Any authenticated user (anonymous or otherwise) can read/write any room and its sub-collections.
-    // Phase 4 will harden this: only the room's masterUid can write, and only listed members can read.
-    match /rooms/{roomId}/{document=**} {
-      allow read, write: if request.auth != null;
+
+    match /rooms/{code} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isMaster() {
+        return isSignedIn()
+          && exists(/databases/$(database)/documents/rooms/$(code))
+          && get(/databases/$(database)/documents/rooms/$(code)).data.masterUid == request.auth.uid;
+      }
+      function isMember() {
+        return isSignedIn()
+          && exists(/databases/$(database)/documents/rooms/$(code)/members/$(request.auth.uid));
+      }
+
+      // Room doc: any signed-in user may read (to validate/join by code).
+      // Create only by the master-to-be (must stamp their own uid); only the
+      // master may update (event/closed) or delete the room.
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.masterUid == request.auth.uid;
+      allow update, delete: if isMaster();
+
+      // Members: members can list the room; a user may create/update only their
+      // own member doc; delete allowed for self (leave) or the master (kick).
+      // Reading one's OWN doc is always allowed so a kicked device still gets a
+      // "removed" snapshot instead of a permission error.
+      match /members/{uid} {
+        allow read: if isMember() || request.auth.uid == uid;
+        allow create, update: if isSignedIn() && request.auth.uid == uid;
+        allow delete: if request.auth.uid == uid || isMaster();
+      }
+
+      // Catalog (meta docs + product docs): members read, master writes.
+      match /meta/{docId} {
+        allow read: if isMember();
+        allow write: if isMaster();
+      }
+      match /products/{productId} {
+        allow read: if isMember();
+        allow write: if isMaster();
+      }
+
+      // Sales log: members may read and append. create/update both allowed so
+      // the offline outbox can retry the same sale id idempotently. No deletes.
+      match /sales/{saleId} {
+        allow read: if isMember();
+        allow create, update: if isMember();
+      }
     }
   }
 }

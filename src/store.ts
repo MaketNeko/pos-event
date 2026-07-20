@@ -245,13 +245,9 @@ export const useApp = create<AppState>((set) => ({
     try {
       await transport.joinRoom(code)
 
-      // Subscribe to catalog updates from master
-      _catalogUnsub = transport.subscribeCatalog((cat) => {
-        console.debug('[store] remoteCatalog updated — products:', cat.products.length)
-        set({ remoteCatalog: cat })
-      })
-
       // ── Membership (Phase 4) ─────────────────────────────────────────
+      // Register as a member FIRST — the hardened Firestore rules only allow
+      // reading catalog/sales once this device is in the room's member list.
       await transport.registerMember(name, 'helper')
 
       _membersUnsub?.()
@@ -261,6 +257,12 @@ export const useApp = create<AppState>((set) => ({
       _selfUnsub = transport.subscribeSelfMembership(() => {
         useApp.getState().showToast('ถูกนำออกจากบูธแล้ว')
         void useApp.getState().endBooth()
+      })
+
+      // Subscribe to catalog updates from master (after membership exists)
+      _catalogUnsub = transport.subscribeCatalog((cat) => {
+        console.debug('[store] remoteCatalog updated — products:', cat.products.length)
+        set({ remoteCatalog: cat })
       })
 
       set({ boothStatus: 'live' })
@@ -313,11 +315,7 @@ export const useApp = create<AppState>((set) => ({
       // transport's current room code. Works for master resuming its own room.
       await transport.joinRoom(code)
 
-      if (role === 'helper') {
-        _catalogUnsub = transport.subscribeCatalog((cat) => set({ remoteCatalog: cat }))
-      }
-
-      // ── Membership (Phase 4) — re-register after restore ─────────────
+      // Re-register membership FIRST (hardened rules gate catalog/sales reads on it)
       await transport.registerMember(name, role)
 
       _membersUnsub?.()
@@ -329,6 +327,7 @@ export const useApp = create<AppState>((set) => ({
           useApp.getState().showToast('ถูกนำออกจากบูธแล้ว')
           void useApp.getState().endBooth()
         })
+        _catalogUnsub = transport.subscribeCatalog((cat) => set({ remoteCatalog: cat }))
       }
 
       initOutboxAutoFlush()
