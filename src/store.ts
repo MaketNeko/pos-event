@@ -249,6 +249,9 @@ export const useApp = create<AppState>((set) => ({
       })
     } catch (err) {
       console.error('[store] goLiveAsMaster failed:', err)
+      const code = (err as { code?: string })?.code
+      const msg = (err as { message?: string })?.message ?? String(err)
+      useApp.getState().showToast('เปิดบูธไม่สำเร็จ: ' + (code ? code + ' — ' : '') + msg)
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '' })
     }
   },
@@ -301,6 +304,9 @@ export const useApp = create<AppState>((set) => ({
       if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
       if (_membersUnsub) { _membersUnsub(); _membersUnsub = null }
       if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
+      const code = (err as { code?: string })?.code
+      const msg = (err as { message?: string })?.message ?? String(err)
+      useApp.getState().showToast('เข้าร่วมบูธไม่สำเร็จ: ' + (code ? code + ' — ' : '') + msg)
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', remoteCatalog: null })
     }
   },
