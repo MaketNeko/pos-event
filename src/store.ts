@@ -107,6 +107,15 @@ let _catalogPushUnsub: (() => void) | null = null
 let _catalogPushTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
+ * Debounce window before an auto-push. Long (1 min) on purpose: each push
+ * re-writes the whole catalog, so coalescing a booth's worth of sales into one
+ * push keeps Firestore reads/writes (and cost) down. Trade-off: helpers can see
+ * stale stock for up to this long — acceptable since the master is the source
+ * of truth and deducts stock immediately on every sale.
+ */
+const CATALOG_PUSH_DEBOUNCE_MS = 60_000
+
+/**
  * Watch the local catalog tables and re-push to helpers whenever anything
  * changes (stock deductions, price/product edits, …). Debounced so a burst of
  * updates collapses into a single push. The first emission (current state) is
@@ -124,7 +133,7 @@ function startCatalogAutoPush(): void {
         void transport.pushCatalog(snapshot).catch((err) =>
           console.warn('[store] auto pushCatalog failed (best-effort):', err),
         )
-      }, 1000)
+      }, CATALOG_PUSH_DEBOUNCE_MS)
     },
     error: (err) => console.warn('[store] catalog liveQuery error:', err),
   })
