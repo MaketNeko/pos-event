@@ -3,15 +3,16 @@
  *
  * Public facade for the sync module. The rest of the app imports ONLY from here.
  *
- * To swap in the real Firebase transport (Phase 2+):
- *   1. Add `src/sync/firebaseTransport.ts` implementing RoomTransport.
- *   2. Change the `transport` export below to point at the Firebase implementation.
- *   3. No other files need to change.
+ * Phase 2: switched to firebaseTransport (catalog + room lifecycle).
+ *   Sales (Phase 3) and membership (Phase 4) are still stubs inside firebaseTransport.
+ *
+ * To revert to local-only during development: swap the import below back to localTransport.
  */
 
-export type { BoothRole, BoothStatus, BoothMember, RoomTransport } from './types'
+export type { BoothRole, BoothStatus, BoothMember, RoomTransport, CatalogSnapshot } from './types'
 export { localTransport } from './localTransport'
+export { firebaseTransport } from './firebaseTransport'
 
-// Active transport used by the store. Phase 2+: swap for firebaseTransport.
-import { localTransport } from './localTransport'
-export const transport = localTransport
+// Active transport used by the store.
+import { firebaseTransport } from './firebaseTransport'
+export const transport = firebaseTransport

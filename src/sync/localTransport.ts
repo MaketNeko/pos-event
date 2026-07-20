@@ -11,7 +11,7 @@
  *   in src/sync/types.ts — no other files need to change.
  */
 
-import type { RoomTransport, BoothMember } from './types'
+import type { RoomTransport, BoothMember, CatalogSnapshot } from './types'
 
 /** Generates a short random alphanumeric code (for simulating a room code locally). */
 function mockCode(): string {
@@ -31,12 +31,12 @@ export const localTransport: RoomTransport = {
     console.debug('[localTransport] joinRoom → code:', code)
   },
 
-  async pushCatalog(_catalogSnapshot: unknown): Promise<void> {
+  async pushCatalog(_catalogSnapshot: CatalogSnapshot): Promise<void> {
     // TODO(phase 2+): write catalog snapshot to Firestore room document / Storage
     console.debug('[localTransport] pushCatalog (no-op in Phase 1)')
   },
 
-  subscribeCatalog(_onUpdate: (catalogSnapshot: unknown) => void): () => void {
+  subscribeCatalog(_onUpdate: (catalogSnapshot: CatalogSnapshot) => void): () => void {
     // TODO(phase 2+): attach a Firestore onSnapshot listener on the catalog document
     console.debug('[localTransport] subscribeCatalog (no-op in Phase 1)')
     return () => { /* unsubscribe no-op */ }

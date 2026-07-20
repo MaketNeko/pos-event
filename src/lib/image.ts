@@ -29,6 +29,42 @@ export function fileToResizedDataURL(file: File, max = 600, quality = 0.8): Prom
   })
 }
 
+/**
+ * Compress a product image dataURL into a tiny thumbnail for embedding in Firestore.
+ * Loads the dataURL into an Image, draws onto a small canvas, returns a JPEG dataURL.
+ * @param dataURL - source JPEG/PNG dataURL
+ * @param max - longest side in pixels (default 96)
+ * @param quality - JPEG quality 0–1 (default 0.5)
+ */
+export function dataURLToThumbnail(
+  dataURL: string,
+  max = 96,
+  quality = 0.5,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      let { width, height } = img
+      if (width > height && width > max) {
+        height = Math.round((height * max) / width)
+        width = max
+      } else if (height > max) {
+        width = Math.round((width * max) / height)
+        height = max
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return reject(new Error('no canvas ctx'))
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = reject
+    img.src = dataURL
+  })
+}
+
 /** Read a File into a dataURL (used to feed the cropper). */
 export function fileToDataURL(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

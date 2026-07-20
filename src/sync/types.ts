@@ -6,6 +6,21 @@
  * The app imports ONLY from src/sync/index.ts — never directly from Firebase.
  */
 
+import type { Product, Category, ProductSet, Owner } from '../types'
+
+/**
+ * The full catalog snapshot pushed from master → helpers.
+ * Phase 2: products, categories, sets, owners + current event info.
+ */
+export interface CatalogSnapshot {
+  products: Product[]
+  categories: Category[]
+  sets: ProductSet[]
+  owners: Owner[]
+  eventId: string
+  eventName: string
+}
+
 /** Whether this device is participating in a live booth session and in what role. */
 export type BoothRole = 'off' | 'master' | 'helper'
 
@@ -53,7 +68,7 @@ export interface RoomTransport {
    * Called by master whenever the catalog changes while a room is live.
    * No-op when called from a helper device.
    */
-  pushCatalog(catalogSnapshot: unknown): Promise<void>
+  pushCatalog(catalogSnapshot: CatalogSnapshot): Promise<void>
 
   /**
    * Subscribe to catalog updates pushed by master.
@@ -61,7 +76,7 @@ export interface RoomTransport {
    * Helpers call this after joining; master may ignore or use for confirmation.
    * Returns an unsubscribe function.
    */
-  subscribeCatalog(onUpdate: (catalogSnapshot: unknown) => void): () => void
+  subscribeCatalog(onUpdate: (catalogSnapshot: CatalogSnapshot) => void): () => void
 
   /**
    * Push a completed sale from any device into the shared append-only sales log.

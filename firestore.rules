@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // INTERIM DEV RULES (Phase 2)
+    // Any authenticated user (anonymous or otherwise) can read/write any room and its sub-collections.
+    // Phase 4 will harden this: only the room's masterUid can write, and only listed members can read.
+    match /rooms/{roomId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

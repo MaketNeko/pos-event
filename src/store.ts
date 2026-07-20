@@ -1,7 +1,13 @@
 import { create } from 'zustand'
-import { setSetting } from './db'
+import { db, setSetting } from './db'
 import { transport } from './sync'
-import type { BoothRole, BoothStatus, BoothMember } from './sync'
+import type { BoothRole, BoothStatus, BoothMember, CatalogSnapshot } from './sync'
+
+/**
+ * Module-level variable to hold the catalog unsubscribe fn.
+ * Not exposed in the store interface — cleaned up by endBooth.
+ */
+let _catalogUnsub: (() => void) | null = null
 
 export type Screen =
   | 'pos'
@@ -31,6 +37,12 @@ interface AppState {
   boothStatus: BoothStatus
   boothCode: string
   boothMembers: BoothMember[]
+  /**
+   * Catalog received from master via Firestore (helper side).
+   * null when booth is off or this device is the master.
+   * Phase 3 will wire this into PosScreen so helpers see master's catalog.
+   */
+  remoteCatalog: CatalogSnapshot | null
   /** Go live as the master device. Creates a room via transport and updates local state. */
   goLiveAsMaster: () => Promise<void>
   /** Join an existing room as a helper device using the given room code. */
@@ -128,35 +140,66 @@ export const useApp = create<AppState>((set) => ({
   boothStatus: 'offline',
   boothCode: '',
   boothMembers: [],
+  remoteCatalog: null,
 
   goLiveAsMaster: async () => {
-    // TODO(phase 2+): also authenticate (Firebase Anonymous Auth) before createRoom
     set({ boothStatus: 'connecting', boothRole: 'master' })
     try {
       const code = await transport.createRoom()
+
+      // Gather current catalog from Dexie
+      const [products, categories, sets, owners] = await Promise.all([
+        db.products.toArray(),
+        db.categories.toArray(),
+        db.sets.toArray(),
+        db.owners.toArray(),
+      ])
+
+      // Resolve current event name (best-effort; empty string if not set)
+      const state = useApp.getState()
+      const currentEventId = state.currentEventId
+      let eventName = ''
+      if (currentEventId) {
+        const ev = await db.events.get(currentEventId)
+        eventName = ev?.name ?? ''
+      }
+
+      await transport.pushCatalog({ products, categories, sets, owners, eventId: currentEventId, eventName })
+
       const members = await transport.listMembers()
       set({ boothStatus: 'live', boothCode: code, boothMembers: members })
-    } catch {
+    } catch (err) {
+      console.error('[store] goLiveAsMaster failed:', err)
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '' })
     }
   },
 
   joinAsHelper: async (code: string) => {
-    // TODO(phase 2+): also authenticate (Firebase Anonymous Auth) before joinRoom
     set({ boothStatus: 'connecting', boothRole: 'helper', boothCode: code })
     try {
       await transport.joinRoom(code)
+
+      // Subscribe to catalog updates from master
+      _catalogUnsub = transport.subscribeCatalog((cat) => {
+        console.debug('[store] remoteCatalog updated — products:', cat.products.length)
+        set({ remoteCatalog: cat })
+      })
+
       const members = await transport.listMembers()
       set({ boothStatus: 'live', boothMembers: members })
-    } catch {
-      set({ boothRole: 'off', boothStatus: 'offline', boothCode: '' })
+    } catch (err) {
+      console.error('[store] joinAsHelper failed:', err)
+      // Clean up subscription if it was set before the error
+      if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
+      set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', remoteCatalog: null })
     }
   },
 
   endBooth: async () => {
-    // TODO(phase 2+): call transport.endRoom() for master, or a leaveRoom() for helper
+    // Tear down catalog subscription (helper side)
+    if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
     await transport.endRoom()
-    set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [] })
+    set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [], remoteCatalog: null })
   },
 
   kickMember: async (id: string) => {
