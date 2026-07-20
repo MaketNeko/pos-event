@@ -217,16 +217,19 @@ export const useApp = create<AppState>((set) => ({
     try {
       const code = await transport.createRoom()
 
-      // Gather current catalog from Dexie and push to the cloud room
-      const catalogSnapshot = await gatherCatalogSnapshot()
-      await transport.pushCatalog(catalogSnapshot)
-
       // ── Membership (Phase 4) ─────────────────────────────────────────
+      // Register as a member BEFORE pushing the catalog: pushCatalog's ghost
+      // cleanup reads the products collection, and the hardened rules only
+      // allow that read for a member of the room.
       const masterName = (await getSetting('shopName', '')) || 'เครื่องหลัก'
       await transport.registerMember(masterName, 'master')
 
       _membersUnsub?.()
       _membersUnsub = transport.subscribeMembers((m) => set({ boothMembers: m }))
+
+      // Gather current catalog from Dexie and push to the cloud room
+      const catalogSnapshot = await gatherCatalogSnapshot()
+      await transport.pushCatalog(catalogSnapshot)
 
       set({ boothStatus: 'live', boothCode: code })
       saveBoothSession('master', code, masterName)
