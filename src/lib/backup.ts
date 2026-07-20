@@ -5,6 +5,7 @@ import type { Backup, SnapshotData } from '../types'
 const KEEP: Record<Backup['reason'], number> = {
   auto: 5,
   'before-restore': 3,
+  'before-booth': 3,
   manual: 10,
 }
 

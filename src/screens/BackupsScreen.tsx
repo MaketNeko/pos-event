@@ -9,6 +9,7 @@ const REASON_LABEL: Record<Backup['reason'], string> = {
   auto: 'อัตโนมัติ',
   manual: 'สำรองเอง',
   'before-restore': 'ก่อนกู้คืน',
+  'before-booth': 'ก่อนเปิดบูธ',
 }
 
 function snapLabel(b: Backup): string {

@@ -91,7 +91,7 @@ export interface SnapshotData {
 export interface Backup {
   id: string
   createdAt: number // epoch ms
-  reason: 'auto' | 'manual' | 'before-restore'
+  reason: 'auto' | 'manual' | 'before-restore' | 'before-booth'
   data: SnapshotData
 }
 

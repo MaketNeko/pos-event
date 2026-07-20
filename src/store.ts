@@ -1,7 +1,9 @@
 import { create } from 'zustand'
+import { liveQuery } from 'dexie'
 import { db, setSetting, getSetting } from './db'
 import { transport } from './sync'
 import { initOutboxAutoFlush, flushOutbox } from './sync/outbox'
+import { createSnapshot } from './lib/backup'
 import type { BoothRole, BoothStatus, BoothMember, CatalogSnapshot } from './sync'
 import type { Sale } from './types'
 
@@ -56,6 +58,82 @@ function upsertById(arr: Sale[], sale: Sale): Sale[] {
   const next = [...arr]
   next[idx] = sale
   return next
+}
+
+// ── Master-side stock deduction for incoming sales ────────────────────────────
+/**
+ * Deduct stock for one sale on the master's db.products. Handles single
+ * products and fixed/mix sets (via their component list). Mirrors the local
+ * checkout logic in PosScreen/CheckoutScreen so helper sales reduce stock too.
+ */
+async function applyStockForSale(sale: Sale): Promise<void> {
+  await db.transaction('rw', db.products, db.sets, async () => {
+    for (const item of sale.items) {
+      if (item.kind === 'product') {
+        const cur = await db.products.get(item.refId)
+        if (cur) await db.products.update(item.refId, { stock: Math.max(0, cur.stock - item.qty) })
+      } else if (item.kind === 'set') {
+        const st = await db.sets.get(item.refId)
+        for (const c of st?.items ?? []) {
+          const cur = await db.products.get(c.productId)
+          if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * item.qty) })
+        }
+      }
+    }
+  })
+}
+
+/**
+ * Master's sales-log handler. Runs for every sale delivered by the room's
+ * sales subscription (own + helpers, plus re-delivery after reload).
+ *
+ * Idempotency: stock is only deducted when the sale is NEW to db.sales.
+ *  - Master's own sales are written to db.sales in markPaid BEFORE the echo
+ *    arrives here → already present → skipped (no double deduction).
+ *  - Helper sales are not yet present → deducted + persisted.
+ *  - Re-delivery after reload → already present → skipped.
+ */
+async function handleMasterSale(sale: Sale): Promise<void> {
+  const existing = await db.sales.get(sale.id)
+  if (!existing) {
+    await applyStockForSale(sale)
+    await db.sales.put(sale)
+  }
+  useApp.setState((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
+}
+
+// ── Real-time catalog auto-push (master only) ─────────────────────────────────
+let _catalogPushUnsub: (() => void) | null = null
+let _catalogPushTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Watch the local catalog tables and re-push to helpers whenever anything
+ * changes (stock deductions, price/product edits, …). Debounced so a burst of
+ * updates collapses into a single push. The first emission (current state) is
+ * skipped because go-live already pushed it.
+ */
+function startCatalogAutoPush(): void {
+  stopCatalogAutoPush()
+  let first = true
+  const sub = liveQuery(() => gatherCatalogSnapshot()).subscribe({
+    next: (snapshot) => {
+      if (first) { first = false; return }
+      if (_catalogPushTimer) clearTimeout(_catalogPushTimer)
+      _catalogPushTimer = setTimeout(() => {
+        _catalogPushTimer = null
+        void transport.pushCatalog(snapshot).catch((err) =>
+          console.warn('[store] auto pushCatalog failed (best-effort):', err),
+        )
+      }, 1000)
+    },
+    error: (err) => console.warn('[store] catalog liveQuery error:', err),
+  })
+  _catalogPushUnsub = () => sub.unsubscribe()
+}
+
+function stopCatalogAutoPush(): void {
+  if (_catalogPushTimer) { clearTimeout(_catalogPushTimer); _catalogPushTimer = null }
+  if (_catalogPushUnsub) { _catalogPushUnsub(); _catalogPushUnsub = null }
 }
 
 export type Screen =
@@ -215,6 +293,12 @@ export const useApp = create<AppState>((set) => ({
   goLiveAsMaster: async () => {
     set({ boothStatus: 'connecting', boothRole: 'master' })
     try {
+      // Rollback point capturing stock BEFORE the booth session starts.
+      // Restorable from the "สำรองในเครื่อง" screen if stock goes wrong.
+      try { await createSnapshot('before-booth') } catch (err) {
+        console.warn('[store] before-booth snapshot failed (best-effort):', err)
+      }
+
       const code = await transport.createRoom()
 
       // ── Membership (Phase 4) ─────────────────────────────────────────
@@ -240,13 +324,13 @@ export const useApp = create<AppState>((set) => ({
       initOutboxAutoFlush()
       void flushOutbox()
 
-      // Subscribe to the room's sales log. Master writes incoming sales
-      // into its own db.sales (union by id — put is idempotent).
+      // Subscribe to the room's sales log. Master deducts stock for any NEW
+      // sale (own sales are already deducted locally + present in db.sales).
       _salesUnsub?.()
-      _salesUnsub = transport.subscribeSales((sale) => {
-        void db.sales.put(sale)
-        set((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
-      })
+      _salesUnsub = transport.subscribeSales((sale) => { void handleMasterSale(sale) })
+
+      // Real-time: re-push catalog to helpers whenever stock/products change.
+      startCatalogAutoPush()
     } catch (err) {
       console.error('[store] goLiveAsMaster failed:', err)
       const code = (err as { code?: string })?.code
@@ -354,9 +438,12 @@ export const useApp = create<AppState>((set) => ({
 
       _salesUnsub?.()
       _salesUnsub = transport.subscribeSales((sale) => {
-        if (role === 'master') void db.sales.put(sale)
+        if (role === 'master') { void handleMasterSale(sale); return }
         set((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
       })
+
+      // Real-time catalog auto-push resumes for the master on restore.
+      if (role === 'master') startCatalogAutoPush()
 
       set({ boothStatus: 'live' })
     } catch (err) {
@@ -376,6 +463,7 @@ export const useApp = create<AppState>((set) => ({
     if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
     if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
     if (_salesUnsub) { _salesUnsub(); _salesUnsub = null }
+    stopCatalogAutoPush()
     clearBoothSession()
     // Remove our own member record (best-effort).
     await transport.leaveMember()
