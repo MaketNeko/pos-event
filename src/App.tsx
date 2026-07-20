@@ -44,6 +44,11 @@ export default function App() {
     void autoSnapshot()
   }, [])
 
+  // ต่อบูธออนไลน์เดิมกลับหลังรีเฟรช (ถ้ามี session ค้าง)
+  useEffect(() => {
+    void useApp.getState().restoreBooth()
+  }, [])
+
   // load saved current event once
   useEffect(() => {
     void getSetting('currentEventId').then((id) => {
