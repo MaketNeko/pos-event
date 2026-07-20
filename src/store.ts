@@ -1,13 +1,28 @@
 import { create } from 'zustand'
 import { db, setSetting } from './db'
 import { transport } from './sync'
+import { initOutboxAutoFlush, flushOutbox } from './sync/outbox'
 import type { BoothRole, BoothStatus, BoothMember, CatalogSnapshot } from './sync'
+import type { Sale } from './types'
 
 /**
- * Module-level variable to hold the catalog unsubscribe fn.
+ * Module-level variables for unsubscribe fns.
  * Not exposed in the store interface — cleaned up by endBooth.
  */
 let _catalogUnsub: (() => void) | null = null
+let _salesUnsub: (() => void) | null = null
+
+/**
+ * Upsert a Sale into an array by id (used for sessionSales).
+ * Replaces an existing entry with the same id, or appends if new.
+ */
+function upsertById(arr: Sale[], sale: Sale): Sale[] {
+  const idx = arr.findIndex((s) => s.id === sale.id)
+  if (idx === -1) return [...arr, sale]
+  const next = [...arr]
+  next[idx] = sale
+  return next
+}
 
 export type Screen =
   | 'pos'
@@ -43,6 +58,13 @@ interface AppState {
    * Phase 3 will wire this into PosScreen so helpers see master's catalog.
    */
   remoteCatalog: CatalogSnapshot | null
+  /**
+   * Sales completed in the current booth session (any device).
+   * Populated via the Firestore sales subscription — updated by upsert so
+   * master's own pushed sales don't duplicate.
+   * Cleared when booth ends.
+   */
+  sessionSales: Sale[]
   /** Go live as the master device. Creates a room via transport and updates local state. */
   goLiveAsMaster: () => Promise<void>
   /** Join an existing room as a helper device using the given room code. */
@@ -141,6 +163,7 @@ export const useApp = create<AppState>((set) => ({
   boothCode: '',
   boothMembers: [],
   remoteCatalog: null,
+  sessionSales: [],
 
   goLiveAsMaster: async () => {
     set({ boothStatus: 'connecting', boothRole: 'master' })
@@ -168,6 +191,20 @@ export const useApp = create<AppState>((set) => ({
 
       const members = await transport.listMembers()
       set({ boothStatus: 'live', boothCode: code, boothMembers: members })
+
+      // ── Sales sync (Phase 3) ──────────────────────────────────────────
+      // Attach outbox auto-flush (idempotent) and do an immediate flush
+      // in case any sales were queued while offline.
+      initOutboxAutoFlush()
+      void flushOutbox()
+
+      // Subscribe to the room's sales log. Master writes incoming sales
+      // into its own db.sales (union by id — put is idempotent).
+      _salesUnsub?.()
+      _salesUnsub = transport.subscribeSales((sale) => {
+        void db.sales.put(sale)
+        set((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
+      })
     } catch (err) {
       console.error('[store] goLiveAsMaster failed:', err)
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '' })
@@ -187,6 +224,21 @@ export const useApp = create<AppState>((set) => ({
 
       const members = await transport.listMembers()
       set({ boothStatus: 'live', boothMembers: members })
+
+      // ── Sales sync (Phase 3) ──────────────────────────────────────────
+      // Attach outbox auto-flush (idempotent) and do an immediate flush
+      // for any sales queued while offline during this session.
+      initOutboxAutoFlush()
+      void flushOutbox()
+
+      // Subscribe to the room's sales log. Helper does NOT write db.sales —
+      // only the master's personal history receives the union. The helper
+      // only tracks sessionSales for the current in-progress confirmation UI.
+      _salesUnsub?.()
+      _salesUnsub = transport.subscribeSales((sale) => {
+        // Intentionally no db.sales.put() here — helper keeps own db clean.
+        set((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
+      })
     } catch (err) {
       console.error('[store] joinAsHelper failed:', err)
       // Clean up subscription if it was set before the error
@@ -198,8 +250,10 @@ export const useApp = create<AppState>((set) => ({
   endBooth: async () => {
     // Tear down catalog subscription (helper side)
     if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
+    // Tear down sales subscription (both sides)
+    if (_salesUnsub) { _salesUnsub(); _salesUnsub = null }
     await transport.endRoom()
-    set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [], remoteCatalog: null })
+    set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [], remoteCatalog: null, sessionSales: [] })
   },
 
   kickMember: async (id: string) => {

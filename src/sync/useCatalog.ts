@@ -26,6 +26,8 @@ export interface CatalogData {
   owners: Owner[]
   /** eventName from the master's snapshot (helper path only; '' otherwise). */
   eventName: string
+  /** eventId from the master's snapshot (helper path only; '' otherwise). */
+  eventId: string
   /** True when this device is a helper reading from remoteCatalog. */
   isHelper: boolean
 }
@@ -79,6 +81,7 @@ export function useCatalogData(): CatalogData {
       sets: helperSets,
       owners: helperOwners,
       eventName: remoteCatalog?.eventName ?? '',
+      eventId: remoteCatalog?.eventId ?? '',
       isHelper: true,
     }
   }
@@ -90,6 +93,7 @@ export function useCatalogData(): CatalogData {
     sets: dbSets ?? [],
     owners: dbOwners ?? [],
     eventName: '',
+    eventId: '',
     isHelper: false,
   }
 }

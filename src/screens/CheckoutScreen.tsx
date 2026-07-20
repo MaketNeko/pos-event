@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { db, uid, getSetting } from '../db'
 import { useApp } from '../store'
 import { useCatalogData } from '../sync/useCatalog'
+import { enqueueSale } from '../sync/outbox'
 import { baht, thaiDate } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { computeMix, setAvailable } from '../lib/sets'
@@ -27,8 +28,10 @@ export function CheckoutScreen() {
   const go = useApp((s) => s.go)
   const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
+  const boothRole = useApp((s) => s.boothRole)
+  const boothCode = useApp((s) => s.boothCode)
 
-  const { products, sets, owners } = useCatalogData()
+  const { products, sets, owners, eventName: remoteEventName, eventId: remoteEventId } = useCatalogData()
   const event = useLiveQuery(() => db.events.get(currentEventId), [currentEventId])
   const promptpay = useLiveQuery(() => getSetting('promptpay'), []) ?? ''
 
@@ -75,6 +78,7 @@ export function CheckoutScreen() {
 
   async function markPaid() {
     if (empty) return
+
     // สร้าง ownerMap เพื่อ snapshot ชื่อเจ้าของ ณ เวลาขาย
     const ownerMap = Object.fromEntries(owners.map((o) => [o.id, o.name]))
     const items: SaleItem[] = [
@@ -89,20 +93,38 @@ export function CheckoutScreen() {
       })),
       ...setLines.map((l) => ({ kind: 'set' as const, refId: l.s.id, name: l.s.name, price: l.s.price, qty: l.qty })),
     ]
-    await db.transaction('rw', db.products, db.sales, async () => {
-      // decrement product stock
-      for (const l of lines) {
-        const cur = await db.products.get(l.p.id)
-        if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
-      }
-      // decrement components for each fixed set sold
-      for (const l of setLines) {
-        for (const c of l.s.items ?? []) {
-          const cur = await db.products.get(c.productId)
-          if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
+
+    if (boothRole === 'off') {
+      // ── Offline / non-booth path — UNCHANGED ─────────────────────────
+      await db.transaction('rw', db.products, db.sales, async () => {
+        // decrement product stock
+        for (const l of lines) {
+          const cur = await db.products.get(l.p.id)
+          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
         }
-      }
-      await db.sales.add({
+        // decrement components for each fixed set sold
+        for (const l of setLines) {
+          for (const c of l.s.items ?? []) {
+            const cur = await db.products.get(c.productId)
+            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
+          }
+        }
+        await db.sales.add({
+          id: uid(),
+          eventId: currentEventId,
+          eventName: event?.name ?? '',
+          items,
+          subtotal,
+          setDiscount: mix.discount,
+          discount,
+          total,
+          method,
+          createdAt: Date.now(),
+        })
+      })
+    } else if (boothRole === 'master') {
+      // ── Master path: local write + push to room for helpers to see ────
+      const sale = {
         id: uid(),
         eventId: currentEventId,
         eventName: event?.name ?? '',
@@ -113,8 +135,41 @@ export function CheckoutScreen() {
         total,
         method,
         createdAt: Date.now(),
+      }
+      await db.transaction('rw', db.products, db.sales, async () => {
+        for (const l of lines) {
+          const cur = await db.products.get(l.p.id)
+          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
+        }
+        for (const l of setLines) {
+          for (const c of l.s.items ?? []) {
+            const cur = await db.products.get(c.productId)
+            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
+          }
+        }
+        await db.sales.add(sale)
       })
-    })
+      await enqueueSale(boothCode, sale)
+    } else {
+      // ── Helper path: NO local db writes; outbox only ──────────────────
+      // Use eventId/eventName from the master's remoteCatalog snapshot.
+      const sale = {
+        id: uid(),
+        eventId: remoteEventId,
+        eventName: remoteEventName,
+        items,
+        subtotal,
+        setDiscount: mix.discount,
+        discount,
+        total,
+        method,
+        createdAt: Date.now(),
+      }
+      // Optimistically add to sessionSales for instant feedback
+      useApp.setState((s) => ({ sessionSales: [...s.sessionSales.filter((x) => x.id !== sale.id), sale] }))
+      await enqueueSale(boothCode, sale)
+    }
+
     setDone(true)
     setTimeout(() => {
       clearCart()

@@ -94,3 +94,11 @@ export interface Backup {
   reason: 'auto' | 'manual' | 'before-restore'
   data: SnapshotData
 }
+
+/** A sale waiting to be pushed to Firestore (offline-first outbox). id === sale.id */
+export interface OutboxItem {
+  id: string       // same as sale.id — used as primary key
+  roomCode: string // room this sale belongs to
+  sale: Sale
+  createdAt: number
+}

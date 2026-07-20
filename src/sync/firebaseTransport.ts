@@ -24,7 +24,7 @@ import {
 import { firestore, ensureAuth } from './firebase'
 import { dataURLToThumbnail } from '../lib/image'
 import type { RoomTransport, BoothMember, CatalogSnapshot } from './types'
-import type { Product } from '../types'
+import type { Product, Sale } from '../types'
 
 // ── Module-level state ────────────────────────────────────────────────────────
 
@@ -259,13 +259,37 @@ export const firebaseTransport: RoomTransport = {
 
   // ── Sales (Phase 3) ─────────────────────────────────────────────────────────
 
-  async pushSale(_sale: unknown): Promise<void> {
-    // TODO(phase 3): append sale to rooms/{code}/sales/{saleId}
+  async pushSale(sale: Sale): Promise<void> {
+    if (!currentRoomCode) throw new Error('No active room')
+    const code = currentRoomCode
+    // Idempotent by sale.id — safe to retry (outbox deduplication relies on this).
+    await setDoc(doc(firestore, 'rooms', code, 'sales', sale.id), sale)
+    console.debug('[firebaseTransport] pushSale → room:', code, '| saleId:', sale.id)
   },
 
-  subscribeSales(_onSale: (sale: unknown) => void): () => void {
-    // TODO(phase 3): onSnapshot on rooms/{code}/sales
-    return () => {}
+  subscribeSales(onSale: (sale: Sale) => void): () => void {
+    if (!currentRoomCode) {
+      console.warn('[firebaseTransport] subscribeSales called with no active room')
+      return () => {}
+    }
+    const code = currentRoomCode
+    // Use docChanges() so each sale is delivered once (as 'added' or 'modified'),
+    // not the entire collection on every write.
+    const unsub = onSnapshot(
+      collection(firestore, 'rooms', code, 'sales'),
+      (snap) => {
+        snap.docChanges().forEach((ch) => {
+          if (ch.type === 'added' || ch.type === 'modified') {
+            onSale(ch.doc.data() as Sale)
+          }
+        })
+      },
+    )
+    console.debug('[firebaseTransport] subscribeSales → room:', code)
+    return () => {
+      unsub()
+      console.debug('[firebaseTransport] subscribeSales unsubscribed')
+    }
   },
 
   // ── Members (Phase 4) ───────────────────────────────────────────────────────

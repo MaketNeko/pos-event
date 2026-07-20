@@ -12,6 +12,7 @@
  */
 
 import type { RoomTransport, BoothMember, CatalogSnapshot } from './types'
+import type { Sale } from '../types'
 
 /** Generates a short random alphanumeric code (for simulating a room code locally). */
 function mockCode(): string {
@@ -42,12 +43,12 @@ export const localTransport: RoomTransport = {
     return () => { /* unsubscribe no-op */ }
   },
 
-  async pushSale(_sale: unknown): Promise<void> {
+  async pushSale(_sale: Sale): Promise<void> {
     // TODO(phase 2+): append sale document to Firestore room's sales sub-collection
     console.debug('[localTransport] pushSale (no-op in Phase 1)')
   },
 
-  subscribeSales(_onSale: (sale: unknown) => void): () => void {
+  subscribeSales(_onSale: (sale: Sale) => void): () => void {
     // TODO(phase 2+): attach a Firestore onSnapshot listener on the sales sub-collection
     console.debug('[localTransport] subscribeSales (no-op in Phase 1)')
     return () => { /* unsubscribe no-op */ }

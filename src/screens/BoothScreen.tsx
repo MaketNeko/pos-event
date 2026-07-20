@@ -6,8 +6,9 @@
  * Phase 2+ will wire up Firebase without changing this screen's interface.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useApp } from '../store'
+import { pendingCount } from '../sync/outbox'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconPhone, IconX, IconTrash } from '../components/Icons'
 import type { BoothMember } from '../sync'
@@ -114,15 +115,19 @@ function BoothOffView() {
 function MasterLiveView() {
   const boothCode = useApp((s) => s.boothCode)
   const boothMembers = useApp((s) => s.boothMembers)
+  const sessionSales = useApp((s) => s.sessionSales)
   const endBooth = useApp((s) => s.endBooth)
   const kickMember = useApp((s) => s.kickMember)
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-5">
-      {/* Live badge */}
+      {/* Live badge + session sales */}
       <div className="flex items-center gap-2">
         <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
         <span className="text-[12px] font-semibold text-green-400">บูธออนไลน์กำลังทำงาน</span>
+        <span className="ml-auto text-[12px] text-pewter">
+          ขายแล้ว {sessionSales.length} บิลรอบนี้
+        </span>
       </div>
 
       {/* QR placeholder */}
@@ -187,11 +192,24 @@ function MemberRow({ member, isLast, onKick }: { member: BoothMember; isLast: bo
 function HelperLiveView() {
   const boothCode = useApp((s) => s.boothCode)
   const boothStatus = useApp((s) => s.boothStatus)
+  const sessionSales = useApp((s) => s.sessionSales)
   const endBooth = useApp((s) => s.endBooth)
+  const [pending, setPending] = useState(0)
+
+  useEffect(() => {
+    if (!boothCode) return
+    let active = true
+    const check = () => {
+      void pendingCount(boothCode).then((n) => { if (active) setPending(n) })
+    }
+    check()
+    const id = setInterval(check, 5000)
+    return () => { active = false; clearInterval(id) }
+  }, [boothCode])
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-5">
-      {/* Status badge */}
+      {/* Status badge + session sales */}
       <div className="flex items-center gap-2">
         {boothStatus === 'live' ? (
           <>
@@ -204,6 +222,10 @@ function HelperLiveView() {
             <span className="text-[12px] font-semibold text-yellow-400">กำลังเชื่อมต่อ…</span>
           </>
         )}
+        <span className="ml-auto text-[12px] text-pewter">
+          ขายแล้ว {sessionSales.length} บิลรอบนี้
+          {pending > 0 && <span className="ml-1 text-yellow-400">(รอส่ง {pending})</span>}
+        </span>
       </div>
 
       {/* Room code display */}
@@ -215,7 +237,7 @@ function HelperLiveView() {
       </div>
 
       <div className="rounded-2xl border border-divider/10 bg-surface px-5 py-4 text-[13px] text-pewter">
-        แค็ตตาล็อกและข้อมูลบูธจะถูกซิงค์จากเครื่องหลักโดยอัตโนมัติ (Phase 2+)
+        แค็ตตาล็อกและการขายจะถูกซิงค์ไปยังเครื่องหลักโดยอัตโนมัติ
       </div>
 
       {/* Leave booth */}

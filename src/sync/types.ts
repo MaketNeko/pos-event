@@ -6,7 +6,7 @@
  * The app imports ONLY from src/sync/index.ts — never directly from Firebase.
  */
 
-import type { Product, Category, ProductSet, Owner } from '../types'
+import type { Product, Category, ProductSet, Owner, Sale } from '../types'
 
 /**
  * The full catalog snapshot pushed from master → helpers.
@@ -82,14 +82,14 @@ export interface RoomTransport {
    * Push a completed sale from any device into the shared append-only sales log.
    * Both master and helpers call this after a bill is completed.
    */
-  pushSale(sale: unknown): Promise<void>
+  pushSale(sale: Sale): Promise<void>
 
   /**
    * Subscribe to new sales pushed by any member.
    * Fires the callback for each incoming sale so other devices can merge it locally.
    * Returns an unsubscribe function.
    */
-  subscribeSales(onSale: (sale: unknown) => void): () => void
+  subscribeSales(onSale: (sale: Sale) => void): () => void
 
   /**
    * List all currently connected members in the room.
