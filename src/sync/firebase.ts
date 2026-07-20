@@ -23,10 +23,19 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  throw new Error(
-    'Missing Firebase env vars — copy .env.example to .env and fill in ' +
-      'VITE_FIREBASE_* (Firebase console → Project settings → Your apps).',
+/**
+ * True when the Firebase web config is present. When false the app still boots
+ * (POS works fully offline) — only the online-booth features fail, surfacing a
+ * toast when the user tries to go live / join. We must NOT throw here: this
+ * module is pulled in eagerly by store.ts, so throwing would blank the whole
+ * app on any build where VITE_FIREBASE_* isn't injected (e.g. CI without .env).
+ */
+export const firebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)
+
+if (!firebaseConfigured) {
+  console.warn(
+    '[firebase] Missing VITE_FIREBASE_* env vars — online-booth mode is disabled. ' +
+      'Copy .env.example to .env (local) or set them as GitHub repo Variables (CI).',
   )
 }
 
