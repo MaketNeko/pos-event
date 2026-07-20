@@ -10,6 +10,7 @@ import { CropModal } from '../components/CropModal'
 import {
   IconStore, IconQR, IconCalendar, IconGrid, IconPalette,
   IconDatabase, IconUpload, IconChevronRight, IconPaw, IconDownload, IconTrash, IconTag, IconClock,
+  IconPhone,
 } from '../components/Icons'
 
 const THEMES = [
@@ -219,6 +220,16 @@ export function SettingsScreen() {
             label="สำรองในเครื่อง"
             sub="จุดย้อนกลับ · แตะเพื่อจัดการ"
             onClick={() => go('backups')}
+            chevron
+          />
+        </Group>
+
+        <Group title="บูธออนไลน์">
+          <SettingRow
+            icon={<IconPhone width={18} height={18} />}
+            label="บูธออนไลน์"
+            sub="ขายพร้อมกันหลายเครื่องในบูธ"
+            onClick={() => go('booth')}
             chevron
           />
         </Group>

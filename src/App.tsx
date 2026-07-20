@@ -19,6 +19,7 @@ import { SetsScreen } from './screens/SetsScreen'
 import { DashboardScreen } from './screens/DashboardScreen'
 import { ChangelogScreen } from './screens/ChangelogScreen'
 import { BackupsScreen } from './screens/BackupsScreen'
+import { BoothScreen } from './screens/BoothScreen'
 import { InstallBanner } from './components/InstallBanner'
 import { UpdatePrompt } from './components/UpdatePrompt'
 
@@ -74,6 +75,7 @@ export default function App() {
         {screen === 'dashboard' && <DashboardScreen />}
         {screen === 'changelog' && <ChangelogScreen />}
         {screen === 'backups' && <BackupsScreen />}
+        {screen === 'booth' && <BoothScreen />}
         {MAIN.has(screen) && <BottomNav />}
         <UpdatePrompt />
         <Toast />
