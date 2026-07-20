@@ -5,7 +5,9 @@
  * Only Firestore + Anonymous Auth are used (no Storage/Hosting).
  *
  * NOTE: firebaseConfig is NOT a secret — these values ship in every web
- * client. Real access control lives in Firestore security rules (Phase 4).
+ * client. Real access control lives in Firestore security rules (Phase 4) and
+ * GCP API-key restrictions. Values are read from Vite env (.env / .env.example)
+ * so they stay out of source control and don't trip secret scanners.
  */
 
 import { initializeApp } from 'firebase/app'
@@ -13,12 +15,19 @@ import { initializeFirestore } from 'firebase/firestore'
 import { getAuth, signInAnonymously, type User } from 'firebase/auth'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDh-bU06vtue7JehARLvYgUH9eGy3oxjpQ',
-  authDomain: 'nekopos-99a46.firebaseapp.com',
-  projectId: 'nekopos-99a46',
-  storageBucket: 'nekopos-99a46.firebasestorage.app',
-  messagingSenderId: '785934952373',
-  appId: '1:785934952373:web:12cd2ea0e3bcc8062d1bfc',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+}
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  throw new Error(
+    'Missing Firebase env vars — copy .env.example to .env and fill in ' +
+      'VITE_FIREBASE_* (Firebase console → Project settings → Your apps).',
+  )
 }
 
 const app = initializeApp(firebaseConfig)
