@@ -55,18 +55,34 @@ export const localTransport: RoomTransport = {
   },
 
   async listMembers(): Promise<BoothMember[]> {
-    // TODO(phase 2+): query Firestore members sub-collection
     console.debug('[localTransport] listMembers → []')
     return []
   },
 
   async kickMember(memberId: string): Promise<void> {
-    // TODO(phase 2+): delete/flag the member document in Firestore so their listener detects eviction
     console.debug('[localTransport] kickMember → memberId:', memberId)
   },
 
+  async registerMember(name: string, role: 'master' | 'helper'): Promise<string> {
+    console.debug('[localTransport] registerMember (no-op) → name:', name, 'role:', role)
+    return 'local-uid'
+  },
+
+  subscribeMembers(_onUpdate: (members: BoothMember[]) => void): () => void {
+    console.debug('[localTransport] subscribeMembers (no-op)')
+    return () => {}
+  },
+
+  subscribeSelfMembership(_onRemoved: () => void): () => void {
+    console.debug('[localTransport] subscribeSelfMembership (no-op)')
+    return () => {}
+  },
+
+  async leaveMember(): Promise<void> {
+    console.debug('[localTransport] leaveMember (no-op)')
+  },
+
   async endRoom(): Promise<void> {
-    // TODO(phase 2+): write a "closed" flag to the Firestore room document so all helpers disconnect
     console.debug('[localTransport] endRoom (no-op in Phase 1)')
   },
 }

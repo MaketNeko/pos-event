@@ -16,6 +16,8 @@ import {
   doc,
   setDoc,
   getDoc,
+  getDocs,
+  deleteDoc,
   collection,
   onSnapshot,
   writeBatch,
@@ -30,6 +32,12 @@ import type { Product, Sale } from '../types'
 
 /** Room code of the currently active room (master: after createRoom; helper: after joinRoom). */
 let currentRoomCode: string | null = null
+
+/** Auth uid of the currently registered member (set by registerMember). */
+let _ownUid: string | null = null
+
+/** setInterval handle for the presence heartbeat (cleared by leaveMember/endRoom). */
+let _heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -104,6 +112,13 @@ export const firebaseTransport: RoomTransport = {
   },
 
   async endRoom(): Promise<void> {
+    // Stop heartbeat if still running (safety net in case leaveMember wasn't called)
+    if (_heartbeatTimer !== null) {
+      clearInterval(_heartbeatTimer)
+      _heartbeatTimer = null
+    }
+    _ownUid = null
+
     if (!currentRoomCode) return
     try {
       await setDoc(
@@ -294,13 +309,165 @@ export const firebaseTransport: RoomTransport = {
 
   // ── Members (Phase 4) ───────────────────────────────────────────────────────
 
-  async listMembers(): Promise<BoothMember[]> {
-    // TODO(phase 4): read rooms/{code}/members sub-collection
-    return []
+  async registerMember(name: string, role: 'master' | 'helper'): Promise<string> {
+    if (!currentRoomCode) throw new Error('No active room')
+    const code = currentRoomCode
+
+    const u = await ensureAuth()
+    const uid = u.uid
+
+    // If a heartbeat is already running (e.g. re-registering after restore), stop it first
+    if (_heartbeatTimer !== null) {
+      clearInterval(_heartbeatTimer)
+      _heartbeatTimer = null
+    }
+
+    const memberRef = doc(firestore, 'rooms', code, 'members', uid)
+    const now = Date.now()
+    await setDoc(memberRef, { uid, name, role, joinedAt: now, lastSeen: now })
+
+    // Heartbeat: update lastSeen every ~20s so online heuristic stays fresh
+    _heartbeatTimer = setInterval(() => {
+      void setDoc(memberRef, { lastSeen: Date.now() }, { merge: true })
+    }, 20_000)
+
+    _ownUid = uid
+    console.debug('[firebaseTransport] registerMember → uid:', uid, 'role:', role)
+    return uid
   },
 
-  async kickMember(_memberId: string): Promise<void> {
-    // TODO(phase 4): delete/flag rooms/{code}/members/{memberId}
+  subscribeMembers(onUpdate: (members: BoothMember[]) => void): () => void {
+    if (!currentRoomCode) {
+      console.warn('[firebaseTransport] subscribeMembers called with no active room')
+      return () => {}
+    }
+    const code = currentRoomCode
+
+    const unsub = onSnapshot(
+      collection(firestore, 'rooms', code, 'members'),
+      (snap) => {
+        const now = Date.now()
+        const members: BoothMember[] = snap.docs.map((d) => {
+          const data = d.data() as {
+            uid: string
+            name: string
+            role: 'master' | 'helper'
+            joinedAt: number
+            lastSeen: number
+          }
+          return {
+            id: data.uid,
+            name: data.name,
+            online: now - data.lastSeen < 60_000,
+            lastSeen: data.lastSeen,
+            role: data.role,
+          }
+        })
+
+        // Sort: master first, then by joinedAt ascending
+        members.sort((a, b) => {
+          if (a.role === 'master' && b.role !== 'master') return -1
+          if (b.role === 'master' && a.role !== 'master') return 1
+          return a.lastSeen - b.lastSeen
+        })
+
+        onUpdate(members)
+      },
+    )
+
+    console.debug('[firebaseTransport] subscribeMembers → room:', code)
+    return () => {
+      unsub()
+      console.debug('[firebaseTransport] subscribeMembers unsubscribed')
+    }
+  },
+
+  subscribeSelfMembership(onRemoved: () => void): () => void {
+    if (!currentRoomCode || !_ownUid) {
+      console.warn('[firebaseTransport] subscribeSelfMembership called without active room or uid')
+      return () => {}
+    }
+    const code = currentRoomCode
+    const uid = _ownUid
+
+    let docEverExisted = false
+
+    const unsub = onSnapshot(
+      doc(firestore, 'rooms', code, 'members', uid),
+      (snap) => {
+        if (snap.exists()) {
+          docEverExisted = true
+        } else if (docEverExisted) {
+          // Doc transitioned from existing → gone: we were kicked
+          console.debug('[firebaseTransport] self membership doc removed — kicked')
+          onRemoved()
+        }
+        // If it never existed yet (initial snapshot not-found), do nothing
+      },
+    )
+
+    console.debug('[firebaseTransport] subscribeSelfMembership → uid:', uid)
+    return () => {
+      unsub()
+      console.debug('[firebaseTransport] subscribeSelfMembership unsubscribed')
+    }
+  },
+
+  async leaveMember(): Promise<void> {
+    // Stop heartbeat first
+    if (_heartbeatTimer !== null) {
+      clearInterval(_heartbeatTimer)
+      _heartbeatTimer = null
+    }
+
+    if (!currentRoomCode || !_ownUid) {
+      _ownUid = null
+      return
+    }
+
+    try {
+      await deleteDoc(doc(firestore, 'rooms', currentRoomCode, 'members', _ownUid))
+      console.debug('[firebaseTransport] leaveMember → deleted own doc')
+    } catch (err) {
+      // Best-effort — don't block teardown
+      console.warn('[firebaseTransport] leaveMember deleteDoc failed (best-effort):', err)
+    } finally {
+      _ownUid = null
+    }
+  },
+
+  async listMembers(): Promise<BoothMember[]> {
+    if (!currentRoomCode) return []
+    const code = currentRoomCode
+    try {
+      const snap = await getDocs(collection(firestore, 'rooms', code, 'members'))
+      const now = Date.now()
+      return snap.docs.map((d) => {
+        const data = d.data() as {
+          uid: string
+          name: string
+          role: 'master' | 'helper'
+          joinedAt: number
+          lastSeen: number
+        }
+        return {
+          id: data.uid,
+          name: data.name,
+          online: now - data.lastSeen < 60_000,
+          lastSeen: data.lastSeen,
+          role: data.role,
+        }
+      })
+    } catch (err) {
+      console.warn('[firebaseTransport] listMembers failed:', err)
+      return []
+    }
+  },
+
+  async kickMember(memberId: string): Promise<void> {
+    if (!currentRoomCode) return
+    await deleteDoc(doc(firestore, 'rooms', currentRoomCode, 'members', memberId))
+    console.debug('[firebaseTransport] kickMember → uid:', memberId)
   },
 }
 

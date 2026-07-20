@@ -11,14 +11,17 @@ import type { Sale } from './types'
  */
 let _catalogUnsub: (() => void) | null = null
 let _salesUnsub: (() => void) | null = null
+let _membersUnsub: (() => void) | null = null
+let _selfUnsub: (() => void) | null = null
 
 /**
  * Persist / clear the active booth session so a page reload can rejoin the
  * same room instead of dropping out. Stored in the settings table.
+ * `name` is the display name used when registering as a member.
  */
 const BOOTH_SESSION_KEY = 'boothSession'
-function saveBoothSession(role: BoothRole, code: string): void {
-  void setSetting(BOOTH_SESSION_KEY, JSON.stringify({ role, code }))
+function saveBoothSession(role: BoothRole, code: string, name: string): void {
+  void setSetting(BOOTH_SESSION_KEY, JSON.stringify({ role, code, name }))
 }
 function clearBoothSession(): void {
   void setSetting(BOOTH_SESSION_KEY, '')
@@ -79,8 +82,8 @@ interface AppState {
   sessionSales: Sale[]
   /** Go live as the master device. Creates a room via transport and updates local state. */
   goLiveAsMaster: () => Promise<void>
-  /** Join an existing room as a helper device using the given room code. */
-  joinAsHelper: (code: string) => Promise<void>
+  /** Join an existing room as a helper device using the given room code and optional display name. */
+  joinAsHelper: (code: string, name?: string) => Promise<void>
   /** Rejoin a saved booth session after a page reload (no-op if none). */
   restoreBooth: () => Promise<void>
   /** End the booth session (master) or leave it (helper). Resets all booth state. */
@@ -203,9 +206,15 @@ export const useApp = create<AppState>((set) => ({
 
       await transport.pushCatalog({ products, categories, sets, owners, eventId: currentEventId, eventName })
 
-      const members = await transport.listMembers()
-      set({ boothStatus: 'live', boothCode: code, boothMembers: members })
-      saveBoothSession('master', code)
+      // ── Membership (Phase 4) ─────────────────────────────────────────
+      const masterName = (await getSetting('shopName', '')) || 'เครื่องหลัก'
+      await transport.registerMember(masterName, 'master')
+
+      _membersUnsub?.()
+      _membersUnsub = transport.subscribeMembers((m) => set({ boothMembers: m }))
+
+      set({ boothStatus: 'live', boothCode: code })
+      saveBoothSession('master', code, masterName)
 
       // ── Sales sync (Phase 3) ──────────────────────────────────────────
       // Attach outbox auto-flush (idempotent) and do an immediate flush
@@ -226,7 +235,7 @@ export const useApp = create<AppState>((set) => ({
     }
   },
 
-  joinAsHelper: async (code: string) => {
+  joinAsHelper: async (code: string, name = 'ผู้ช่วย') => {
     set({ boothStatus: 'connecting', boothRole: 'helper', boothCode: code })
     try {
       await transport.joinRoom(code)
@@ -237,9 +246,20 @@ export const useApp = create<AppState>((set) => ({
         set({ remoteCatalog: cat })
       })
 
-      const members = await transport.listMembers()
-      set({ boothStatus: 'live', boothMembers: members })
-      saveBoothSession('helper', code)
+      // ── Membership (Phase 4) ─────────────────────────────────────────
+      await transport.registerMember(name, 'helper')
+
+      _membersUnsub?.()
+      _membersUnsub = transport.subscribeMembers((m) => set({ boothMembers: m }))
+
+      _selfUnsub?.()
+      _selfUnsub = transport.subscribeSelfMembership(() => {
+        useApp.getState().showToast('ถูกนำออกจากบูธแล้ว')
+        void useApp.getState().endBooth()
+      })
+
+      set({ boothStatus: 'live' })
+      saveBoothSession('helper', code, name)
 
       // ── Sales sync (Phase 3) ──────────────────────────────────────────
       // Attach outbox auto-flush (idempotent) and do an immediate flush
@@ -257,8 +277,10 @@ export const useApp = create<AppState>((set) => ({
       })
     } catch (err) {
       console.error('[store] joinAsHelper failed:', err)
-      // Clean up subscription if it was set before the error
+      // Clean up subscriptions if set before the error
       if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
+      if (_membersUnsub) { _membersUnsub(); _membersUnsub = null }
+      if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', remoteCatalog: null })
     }
   },
@@ -271,11 +293,14 @@ export const useApp = create<AppState>((set) => ({
   restoreBooth: async () => {
     const raw = await getSetting(BOOTH_SESSION_KEY, '')
     if (!raw) return
-    let saved: { role?: BoothRole; code?: string }
+    let saved: { role?: BoothRole; code?: string; name?: string }
     try { saved = JSON.parse(raw) } catch { clearBoothSession(); return }
     const role = saved.role
     const code = saved.code
     if ((role !== 'master' && role !== 'helper') || !code) { clearBoothSession(); return }
+
+    const defaultName = role === 'master' ? 'เครื่องหลัก' : 'ผู้ช่วย'
+    const name = saved.name || defaultName
 
     set({ boothStatus: 'connecting', boothRole: role, boothCode: code })
     try {
@@ -287,6 +312,20 @@ export const useApp = create<AppState>((set) => ({
         _catalogUnsub = transport.subscribeCatalog((cat) => set({ remoteCatalog: cat }))
       }
 
+      // ── Membership (Phase 4) — re-register after restore ─────────────
+      await transport.registerMember(name, role)
+
+      _membersUnsub?.()
+      _membersUnsub = transport.subscribeMembers((m) => set({ boothMembers: m }))
+
+      if (role === 'helper') {
+        _selfUnsub?.()
+        _selfUnsub = transport.subscribeSelfMembership(() => {
+          useApp.getState().showToast('ถูกนำออกจากบูธแล้ว')
+          void useApp.getState().endBooth()
+        })
+      }
+
       initOutboxAutoFlush()
       void flushOutbox()
 
@@ -296,23 +335,30 @@ export const useApp = create<AppState>((set) => ({
         set((s) => ({ sessionSales: upsertById(s.sessionSales, sale) }))
       })
 
-      const members = await transport.listMembers()
-      set({ boothStatus: 'live', boothMembers: members })
+      set({ boothStatus: 'live' })
     } catch (err) {
       console.warn('[store] restoreBooth: room unavailable, clearing session', err)
       if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
+      if (_membersUnsub) { _membersUnsub(); _membersUnsub = null }
+      if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
       clearBoothSession()
       set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', remoteCatalog: null, sessionSales: [] })
     }
   },
 
   endBooth: async () => {
-    // Tear down catalog subscription (helper side)
+    const role = useApp.getState().boothRole
+    // Tear down all subscriptions
+    if (_membersUnsub) { _membersUnsub(); _membersUnsub = null }
+    if (_selfUnsub) { _selfUnsub(); _selfUnsub = null }
     if (_catalogUnsub) { _catalogUnsub(); _catalogUnsub = null }
-    // Tear down sales subscription (both sides)
     if (_salesUnsub) { _salesUnsub(); _salesUnsub = null }
     clearBoothSession()
-    await transport.endRoom()
+    // Remove our own member record (best-effort).
+    await transport.leaveMember()
+    // Only the MASTER closes the room. A helper leaving (or being kicked)
+    // must NOT close the room for everyone else.
+    if (role === 'master') await transport.endRoom()
     set({ boothRole: 'off', boothStatus: 'offline', boothCode: '', boothMembers: [], remoteCatalog: null, sessionSales: [] })
   },
 

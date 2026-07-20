@@ -37,6 +37,8 @@ export interface BoothMember {
   online: boolean
   /** Epoch-ms of the last heartbeat or activity seen from this member. */
   lastSeen: number
+  /** Role of this member in the room. Optional — populated by subscribeMembers. */
+  role?: 'master' | 'helper'
 }
 
 /**
@@ -92,8 +94,9 @@ export interface RoomTransport {
   subscribeSales(onSale: (sale: Sale) => void): () => void
 
   /**
-   * List all currently connected members in the room.
+   * List all currently connected members in the room (one-shot getDocs).
    * Resolves with the latest snapshot of BoothMember records.
+   * Prefer subscribeMembers for live updates; listMembers is a fallback.
    */
   listMembers(): Promise<BoothMember[]>
 
@@ -103,6 +106,34 @@ export interface RoomTransport {
    * @param memberId - The id of the BoothMember to remove.
    */
   kickMember(memberId: string): Promise<void>
+
+  /**
+   * Register this device as a room member (master or helper).
+   * Writes a presence doc and starts a heartbeat to keep lastSeen fresh.
+   * Idempotent — safe to call after restore.
+   * @returns The auth uid of this device.
+   */
+  registerMember(name: string, role: 'master' | 'helper'): Promise<string>
+
+  /**
+   * Subscribe to live member list updates for the current room.
+   * Fires onUpdate whenever members join, leave, or their heartbeat changes.
+   * Returns an unsubscribe function.
+   */
+  subscribeMembers(onUpdate: (members: BoothMember[]) => void): () => void
+
+  /**
+   * Subscribe to this device's own membership doc.
+   * Calls onRemoved if the doc disappears after having existed (i.e., was kicked).
+   * Returns an unsubscribe function.
+   */
+  subscribeSelfMembership(onRemoved: () => void): () => void
+
+  /**
+   * Remove this device's presence doc and stop the heartbeat.
+   * Best-effort — ignores errors so teardown always completes.
+   */
+  leaveMember(): Promise<void>
 
   /**
    * End the booth session (master-only operation).

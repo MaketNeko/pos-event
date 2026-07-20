@@ -52,6 +52,7 @@ function BoothOffView() {
   const joinAsHelper = useApp((s) => s.joinAsHelper)
   const boothStatus = useApp((s) => s.boothStatus)
   const [helperCode, setHelperCode] = useState('')
+  const [helperName, setHelperName] = useState('')
 
   const busy = boothStatus === 'connecting'
 
@@ -83,7 +84,19 @@ function BoothOffView() {
             <div className="mt-0.5 text-[12px] text-pewter">ผู้ช่วย · กรอกรหัสห้องจากเครื่องหลัก</div>
           </div>
         </div>
-        <div className="mt-4 flex gap-2">
+        {/* Name input */}
+        <div className="mt-4">
+          <label className="mb-1 block text-[11px] text-pewter">ชื่อของคุณ (ผู้ช่วย)</label>
+          <input
+            value={helperName}
+            onChange={(e) => setHelperName(e.target.value)}
+            maxLength={30}
+            placeholder="ผู้ช่วย"
+            className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3 py-2.5 text-[14px] text-milky placeholder:text-pewter/40 outline-none focus:border-electrum"
+          />
+        </div>
+        {/* Code + join */}
+        <div className="mt-2 flex gap-2">
           <input
             value={helperCode}
             onChange={(e) => setHelperCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
@@ -93,14 +106,14 @@ function BoothOffView() {
           />
           <button
             disabled={busy || helperCode.length < 4}
-            onClick={() => void joinAsHelper(helperCode)}
+            onClick={() => void joinAsHelper(helperCode, helperName.trim() || 'ผู้ช่วย')}
             className="rounded-xl bg-electrum px-4 py-2.5 text-sm font-semibold text-ink disabled:opacity-40 active:brightness-90"
           >
             เข้าร่วม
           </button>
         </div>
         <p className="mt-2.5 text-[11px] text-pewter/60">
-          (Phase 4) สแกน QR จากเครื่องหลักแทนการกรอกรหัสได้
+          (Phase 4b) สแกน QR จากเครื่องหลักแทนการกรอกรหัสได้
         </p>
       </div>
 
@@ -168,22 +181,30 @@ function MasterLiveView() {
 }
 
 function MemberRow({ member, isLast, onKick }: { member: BoothMember; isLast: boolean; onKick: () => void }) {
+  const canKick = member.role !== 'master'
   return (
     <div className={`flex items-center gap-3 px-4 py-3.5 ${isLast ? '' : 'border-b border-divider/10'}`}>
       <span className={`h-2 w-2 flex-none rounded-full ${member.online ? 'bg-green-400' : 'bg-pewter/40'}`} />
       <div className="min-w-0 flex-1">
-        <div className="text-sm text-milky">{member.name}</div>
+        <div className="text-sm text-milky">
+          {member.name}
+          {member.role === 'master' && (
+            <span className="ml-1.5 text-[10px] font-semibold text-electrum/70">เครื่องหลัก</span>
+          )}
+        </div>
         <div className="text-[11px] text-pewter">
           {member.online ? 'ออนไลน์' : 'ออฟไลน์'}
         </div>
       </div>
-      <button
-        onClick={onKick}
-        title="คิกออก"
-        className="grid h-8 w-8 place-items-center rounded-lg text-danger/70 active:bg-danger/10"
-      >
-        <IconTrash width={16} height={16} />
-      </button>
+      {canKick && (
+        <button
+          onClick={onKick}
+          title="คิกออก"
+          className="grid h-8 w-8 place-items-center rounded-lg text-danger/70 active:bg-danger/10"
+        >
+          <IconTrash width={16} height={16} />
+        </button>
+      )}
     </div>
   )
 }
