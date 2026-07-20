@@ -49,6 +49,18 @@ export default function App() {
     void useApp.getState().restoreBooth()
   }, [])
 
+  // เปิดจากลิงก์ QR (?booth=CODE): เติมรหัสให้ผู้ช่วย + พาไปหน้าบูธ แล้วล้าง query ทิ้ง
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('booth')
+    if (!code) return
+    const s = useApp.getState()
+    s.setPendingJoinCode(code.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))
+    s.go('booth')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('booth')
+    window.history.replaceState({}, '', url.toString())
+  }, [])
+
   // load saved current event once
   useEffect(() => {
     void getSetting('currentEventId').then((id) => {

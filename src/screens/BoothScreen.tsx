@@ -7,11 +7,17 @@
  */
 
 import { useState, useEffect } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useApp } from '../store'
 import { pendingCount } from '../sync/outbox'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconPhone, IconX, IconTrash } from '../components/Icons'
 import type { BoothMember } from '../sync'
+
+/** Build the QR join deep-link for a room code (works in dev and on GitHub Pages). */
+function joinUrl(code: string): string {
+  return `${window.location.origin}${import.meta.env.BASE_URL}?booth=${code}`
+}
 
 // ── Small local icon for the "wifi / broadcast" concept ──────────────────────
 // Reuses existing SVG base pattern from Icons.tsx. No new dependency needed.
@@ -51,8 +57,18 @@ function BoothOffView() {
   const goLiveAsMaster = useApp((s) => s.goLiveAsMaster)
   const joinAsHelper = useApp((s) => s.joinAsHelper)
   const boothStatus = useApp((s) => s.boothStatus)
+  const pendingJoinCode = useApp((s) => s.pendingJoinCode)
+  const setPendingJoinCode = useApp((s) => s.setPendingJoinCode)
   const [helperCode, setHelperCode] = useState('')
   const [helperName, setHelperName] = useState('')
+
+  // Prefill the code when arriving from a scanned QR deep-link, then consume it.
+  useEffect(() => {
+    if (pendingJoinCode) {
+      setHelperCode(pendingJoinCode)
+      setPendingJoinCode('')
+    }
+  }, [pendingJoinCode, setPendingJoinCode])
 
   const busy = boothStatus === 'connecting'
 
@@ -113,7 +129,7 @@ function BoothOffView() {
           </button>
         </div>
         <p className="mt-2.5 text-[11px] text-pewter/60">
-          (Phase 4b) สแกน QR จากเครื่องหลักแทนการกรอกรหัสได้
+          หรือสแกน QR จากเครื่องหลักด้วยกล้องมือถือ แล้วรหัสจะเติมให้อัตโนมัติ
         </p>
       </div>
 
@@ -143,12 +159,19 @@ function MasterLiveView() {
         </span>
       </div>
 
-      {/* QR placeholder */}
-      <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-divider/20 bg-surface py-8">
-        <div className="text-[13px] font-mono font-bold tracking-[0.25em] text-electrum">
+      {/* QR + room code */}
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-divider/10 bg-surface py-6">
+        {boothCode && (
+          <div className="rounded-2xl bg-white p-3 shadow-xl">
+            <QRCodeSVG value={joinUrl(boothCode)} size={168} />
+          </div>
+        )}
+        <div className="font-mono text-[20px] font-bold tracking-[0.3em] text-electrum">
           {boothCode}
         </div>
-        <div className="text-[11px] text-pewter">QR จะแสดงที่นี่ (Phase 4)</div>
+        <div className="px-6 text-center text-[11px] text-pewter">
+          ให้ผู้ช่วยสแกน QR ด้วยกล้องมือถือ หรือกรอกรหัสนี้ในหน้า “เข้าร่วมบูธ”
+        </div>
       </div>
 
       {/* Members list */}

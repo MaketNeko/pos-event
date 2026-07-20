@@ -80,6 +80,9 @@ interface AppState {
    * Cleared when booth ends.
    */
   sessionSales: Sale[]
+  /** Room code prefilled from a scanned QR deep-link (?booth=CODE); '' when none. */
+  pendingJoinCode: string
+  setPendingJoinCode: (v: string) => void
   /** Go live as the master device. Creates a room via transport and updates local state. */
   goLiveAsMaster: () => Promise<void>
   /** Join an existing room as a helper device using the given room code and optional display name. */
@@ -181,6 +184,8 @@ export const useApp = create<AppState>((set) => ({
   boothMembers: [],
   remoteCatalog: null,
   sessionSales: [],
+  pendingJoinCode: '',
+  setPendingJoinCode: (v) => set({ pendingJoinCode: v }),
 
   goLiveAsMaster: async () => {
     set({ boothStatus: 'connecting', boothRole: 'master' })
