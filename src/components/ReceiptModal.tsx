@@ -61,6 +61,10 @@ export function ReceiptModal({ sale, onClose }: { sale: Sale; onClose: () => voi
                   <div className="text-[14px] text-milky">{it.name}</div>
                   <div className="text-[11px] text-pewter">
                     {it.qty} × {baht(it.price)}
+                    {it.origPrice !== undefined && (
+                      <span className="line-through opacity-60"> {baht(it.origPrice)}</span>
+                    )}
+                    {it.note && <span className="text-electrum"> · {it.note}</span>}
                   </div>
                 </div>
                 <div className="font-num text-[15px] font-semibold text-milky">

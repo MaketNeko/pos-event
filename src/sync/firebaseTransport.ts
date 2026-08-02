@@ -327,8 +327,11 @@ export const firebaseTransport: RoomTransport = {
   async pushSale(sale: Sale): Promise<void> {
     if (!currentRoomCode) throw new Error('No active room')
     const code = currentRoomCode
+    // ต้นทุน (item.cost) เป็นข้อมูลเฉพาะเครื่องหลัก — ตัดออกก่อนขึ้น Firestore
+    // เพื่อไม่ให้ผู้ช่วยเห็นต้นทุนร้าน
+    const wire: Sale = { ...sale, items: sale.items.map(({ cost: _cost, ...rest }) => rest) }
     // Idempotent by sale.id — safe to retry (outbox deduplication relies on this).
-    await setDoc(doc(firestore, 'rooms', code, 'sales', sale.id), sale)
+    await setDoc(doc(firestore, 'rooms', code, 'sales', sale.id), wire)
     console.debug('[firebaseTransport] pushSale → room:', code, '| saleId:', sale.id)
   },
 

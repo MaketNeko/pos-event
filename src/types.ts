@@ -26,6 +26,20 @@ export interface Product {
   ownerId?: string // ฝากขาย — id ของเจ้าของ (ไม่มี = ของร้าน)
 }
 
+/**
+ * LOT = การรับของเข้า 1 ครั้ง (สต็อกเข้า + ต้นทุนต่อชิ้นของรอบนั้น)
+ * ขายตัด lot เก่าสุดก่อน (FIFO) — สต็อกรวมของสินค้า = ผลรวม qtyLeft ของทุก lot
+ */
+export interface Lot {
+  id: string
+  productId: string
+  qtyIn: number // จำนวนที่รับเข้า (แก้ย้อนหลังได้เมื่อลงผิด)
+  qtyLeft: number // คงเหลือใน lot นี้
+  cost: number // ต้นทุนต่อชิ้น (บาท)
+  note?: string // เช่น "พิมพ์ครั้งที่ 2", "ยอดยกมา"
+  createdAt: number
+}
+
 export interface Event {
   id: string
   name: string
@@ -58,6 +72,9 @@ export interface SaleItem {
   qty: number
   ownerId?: string    // สแนปชอต ณ เวลาขาย (เฉพาะ kind:'product')
   ownerName?: string  // สแนปชอต ณ เวลาขาย (เฉพาะ kind:'product')
+  cost?: number       // ต้นทุนรวมของรายการนี้ (ตัด lot แบบ FIFO ณ เวลาขาย)
+  origPrice?: number  // ราคาปกติ เมื่อถูกแก้ราคาตอนขาย (ลดตำหนิ/แจกฟรี)
+  note?: string       // เหตุผลราคาพิเศษ เช่น "ตำหนิ", "แจกฟรี", "ของเก่า"
 }
 
 export interface Sale {
@@ -86,6 +103,7 @@ export interface SnapshotData {
   settings: Setting[]
   sets: ProductSet[]
   owners: Owner[]
+  lots?: Lot[] // optional — backup เก่าก่อนมีระบบ lot ไม่มีฟิลด์นี้
 }
 
 export interface Backup {

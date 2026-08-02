@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import type { Category, Product, Event, Sale, Setting, ProductSet, Owner, Backup, OutboxItem } from './types'
+import type { Category, Product, Event, Sale, Setting, ProductSet, Owner, Backup, OutboxItem, Lot } from './types'
 
 export class PosDB extends Dexie {
   categories!: Table<Category, string>
@@ -11,6 +11,7 @@ export class PosDB extends Dexie {
   owners!: Table<Owner, string>
   backups!: Table<Backup, string>
   outbox!: Table<OutboxItem, string>
+  lots!: Table<Lot, string>
 
   constructor() {
     super('pos-event')
@@ -34,6 +35,27 @@ export class PosDB extends Dexie {
     this.version(5).stores({
       outbox: 'id, roomCode, createdAt',
     })
+    // v6: ระบบต้นทุน/LOT — สินค้าเดิมที่มีสต็อกจะได้ lot "ยอดยกมา" (ต้นทุน 0 แก้ทีหลังได้)
+    this.version(6)
+      .stores({
+        lots: 'id, productId, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const products = await tx.table<Product>('products').toArray()
+        const now = Date.now()
+        const lots: Lot[] = products
+          .filter((p) => (p.stock ?? 0) > 0)
+          .map((p, i) => ({
+            id: uid(),
+            productId: p.id,
+            qtyIn: p.stock,
+            qtyLeft: p.stock,
+            cost: 0,
+            note: 'ยอดยกมา',
+            createdAt: now + i,
+          }))
+        if (lots.length) await tx.table('lots').bulkAdd(lots)
+      })
   }
 }
 

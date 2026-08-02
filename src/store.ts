@@ -4,6 +4,7 @@ import { db, setSetting, getSetting } from './db'
 import { transport } from './sync'
 import { initOutboxAutoFlush, flushOutbox } from './sync/outbox'
 import { createSnapshot } from './lib/backup'
+import { consumeFIFO } from './lib/lots'
 import type { BoothRole, BoothStatus, BoothMember, CatalogSnapshot } from './sync'
 import type { Sale } from './types'
 
@@ -65,19 +66,25 @@ function upsertById(arr: Sale[], sale: Sale): Sale[] {
  * Deduct stock for one sale on the master's db.products. Handles single
  * products and fixed/mix sets (via their component list). Mirrors the local
  * checkout logic in PosScreen/CheckoutScreen so helper sales reduce stock too.
+ * Also consumes cost lots (FIFO) and fills item.cost so helper sales carry
+ * COGS in the master's sales history (helpers don't have lot data).
  */
 async function applyStockForSale(sale: Sale): Promise<void> {
-  await db.transaction('rw', db.products, db.sets, async () => {
+  await db.transaction('rw', db.products, db.sets, db.lots, async () => {
     for (const item of sale.items) {
       if (item.kind === 'product') {
         const cur = await db.products.get(item.refId)
         if (cur) await db.products.update(item.refId, { stock: Math.max(0, cur.stock - item.qty) })
+        item.cost = await consumeFIFO(item.refId, item.qty)
       } else if (item.kind === 'set') {
         const st = await db.sets.get(item.refId)
+        let cogs = 0
         for (const c of st?.items ?? []) {
           const cur = await db.products.get(c.productId)
           if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * item.qty) })
+          cogs += await consumeFIFO(c.productId, c.qty * item.qty)
         }
+        item.cost = cogs
       }
     }
   })

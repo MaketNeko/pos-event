@@ -8,12 +8,18 @@ import { enqueueSale } from '../sync/outbox'
 import { baht, thaiDate } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { computeMix, setAvailable } from '../lib/sets'
+import { consumeFIFO } from '../lib/lots'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconCheck, IconPlus, IconMinus, IconTrash, IconTag, IconQR } from '../components/Icons'
-import type { SaleItem, Product, ProductSet } from '../types'
+import type { Sale, SaleItem, Product, ProductSet } from '../types'
 
 type Line = { p: Product; qty: number }
 type SetLine = { s: ProductSet; qty: number }
+
+/** ราคาพิเศษต่อชิ้นที่ตั้งตอนขาย (ลดตำหนิ/แจกฟรี) — key = productId */
+type PriceOverride = { price: number; note?: string }
+
+const PRICE_NOTES = ['ตำหนิ', 'แจกฟรี', 'ของเก่า'] as const
 
 export function CheckoutScreen() {
   const cart = useApp((s) => s.cart)
@@ -40,6 +46,44 @@ export function CheckoutScreen() {
   const [method, setMethod] = useState<'promptpay' | 'cash'>('promptpay')
   const [done, setDone] = useState(false)
 
+  // ราคาพิเศษต่อชิ้น (ลดตำหนิ / แจกฟรี 0 บาท)
+  const [overrides, setOverrides] = useState<Record<string, PriceOverride>>({})
+  const [editingPrice, setEditingPrice] = useState<string | null>(null)
+  const [ovRaw, setOvRaw] = useState('')
+
+  const effPrice = (p: Product) => overrides[p.id]?.price ?? p.price
+
+  function openPriceEditor(p: Product) {
+    if (editingPrice === p.id) { setEditingPrice(null); return }
+    setEditingPrice(p.id)
+    setOvRaw(String(overrides[p.id]?.price ?? p.price))
+  }
+
+  function setOverridePrice(p: Product, raw: string) {
+    setOvRaw(raw)
+    const v = Math.max(0, parseInt(raw) || 0)
+    setOverrides((o) => ({ ...o, [p.id]: { price: v, note: o[p.id]?.note } }))
+  }
+
+  function toggleOverrideNote(p: Product, note: string) {
+    setOverrides((o) => {
+      const cur = o[p.id] ?? { price: p.price }
+      const next = { ...cur, note: cur.note === note ? undefined : note }
+      // "แจกฟรี" = ตั้งราคา 0 ให้เลย
+      if (note === 'แจกฟรี' && next.note === note) { next.price = 0; setOvRaw('0') }
+      return { ...o, [p.id]: next }
+    })
+  }
+
+  function clearOverride(p: Product) {
+    setOverrides((o) => {
+      const next = { ...o }
+      delete next[p.id]
+      return next
+    })
+    setEditingPrice(null)
+  }
+
   const lines = useMemo<Line[]>(() => {
     const out: Line[] = []
     for (const [id, qty] of Object.entries(cart)) {
@@ -59,9 +103,14 @@ export function CheckoutScreen() {
   }, [setCart, sets])
 
   const mixSets = sets.filter((s) => s.type === 'mix' && s.active)
-  const mix = computeMix(mixSets, cart, products)
+  // โปรเซ็ต mix คิดจากราคาที่ขายจริง (รวมราคาพิเศษที่แก้ตอนขาย)
+  const mixProducts = useMemo(
+    () => products.map((p) => (overrides[p.id] ? { ...p, price: overrides[p.id].price } : p)),
+    [products, overrides],
+  )
+  const mix = computeMix(mixSets, cart, mixProducts)
 
-  const prodSubtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0)
+  const prodSubtotal = lines.reduce((s, l) => s + effPrice(l.p) * l.qty, 0)
   const setSubtotal = setLines.reduce((s, l) => s + l.s.price * l.qty, 0)
   const subtotal = prodSubtotal + setSubtotal
   const afterMix = Math.max(0, subtotal - mix.discount)
@@ -82,49 +131,27 @@ export function CheckoutScreen() {
     // สร้าง ownerMap เพื่อ snapshot ชื่อเจ้าของ ณ เวลาขาย
     const ownerMap = Object.fromEntries(owners.map((o) => [o.id, o.name]))
     const items: SaleItem[] = [
-      ...lines.map((l) => ({
-        kind: 'product' as const,
-        refId: l.p.id,
-        name: l.p.name,
-        price: l.p.price,
-        qty: l.qty,
-        ownerId: l.p.ownerId,
-        ownerName: l.p.ownerId ? ownerMap[l.p.ownerId] : undefined,
-      })),
+      ...lines.map((l) => {
+        const ov = overrides[l.p.id]
+        return {
+          kind: 'product' as const,
+          refId: l.p.id,
+          name: l.p.name,
+          price: ov ? ov.price : l.p.price,
+          qty: l.qty,
+          ownerId: l.p.ownerId,
+          ownerName: l.p.ownerId ? ownerMap[l.p.ownerId] : undefined,
+          // เก็บราคาปกติ + เหตุผล เมื่อขายราคาพิเศษ (ลดตำหนิ/แจกฟรี)
+          origPrice: ov && ov.price !== l.p.price ? l.p.price : undefined,
+          note: ov?.note,
+        }
+      }),
       ...setLines.map((l) => ({ kind: 'set' as const, refId: l.s.id, name: l.s.name, price: l.s.price, qty: l.qty })),
     ]
 
-    if (boothRole === 'off') {
-      // ── Offline / non-booth path — UNCHANGED ─────────────────────────
-      await db.transaction('rw', db.products, db.sales, async () => {
-        // decrement product stock
-        for (const l of lines) {
-          const cur = await db.products.get(l.p.id)
-          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
-        }
-        // decrement components for each fixed set sold
-        for (const l of setLines) {
-          for (const c of l.s.items ?? []) {
-            const cur = await db.products.get(c.productId)
-            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
-          }
-        }
-        await db.sales.add({
-          id: uid(),
-          eventId: currentEventId,
-          eventName: event?.name ?? '',
-          items,
-          subtotal,
-          setDiscount: mix.discount,
-          discount,
-          total,
-          method,
-          createdAt: Date.now(),
-        })
-      })
-    } else if (boothRole === 'master') {
-      // ── Master path: local write + push to room for helpers to see ────
-      const sale = {
+    if (boothRole === 'off' || boothRole === 'master') {
+      // ── Local path (offline + master): ตัดสต็อก + ตัด lot FIFO เก็บต้นทุนลงบิล ──
+      const sale: Sale = {
         id: uid(),
         eventId: currentEventId,
         eventName: event?.name ?? '',
@@ -136,20 +163,27 @@ export function CheckoutScreen() {
         method,
         createdAt: Date.now(),
       }
-      await db.transaction('rw', db.products, db.sales, async () => {
-        for (const l of lines) {
-          const cur = await db.products.get(l.p.id)
-          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
-        }
-        for (const l of setLines) {
-          for (const c of l.s.items ?? []) {
-            const cur = await db.products.get(c.productId)
-            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
+      await db.transaction('rw', db.products, db.lots, db.sales, async () => {
+        for (const item of sale.items) {
+          if (item.kind === 'product') {
+            const cur = await db.products.get(item.refId)
+            if (cur) await db.products.update(item.refId, { stock: Math.max(0, cur.stock - item.qty) })
+            item.cost = await consumeFIFO(item.refId, item.qty)
+          } else {
+            // fixed set: ตัดสต็อก + ต้นทุนตาม component
+            const st = sets.find((x) => x.id === item.refId)
+            let cogs = 0
+            for (const c of st?.items ?? []) {
+              const cur = await db.products.get(c.productId)
+              if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * item.qty) })
+              cogs += await consumeFIFO(c.productId, c.qty * item.qty)
+            }
+            item.cost = cogs
           }
         }
         await db.sales.add(sale)
       })
-      await enqueueSale(boothCode, sale)
+      if (boothRole === 'master') await enqueueSale(boothCode, sale)
     } else {
       // ── Helper path: NO local db writes; outbox only ──────────────────
       // Use eventId/eventName from the master's remoteCatalog snapshot.
@@ -188,36 +222,96 @@ export function CheckoutScreen() {
 
       <div className="flex-1 overflow-y-auto px-5 pb-6 pt-4">
         {/* product lines */}
-        {lines.map((l) => (
-          <div key={l.p.id} className="flex items-center gap-3 border-b border-divider/10 py-2.5">
-            <div className="h-11 w-11 overflow-hidden rounded-xl bg-[#20262b]">
-              {l.p.image && <img src={l.p.image} alt={l.p.name} className="h-full w-full object-cover" />}
+        {lines.map((l) => {
+          const ov = overrides[l.p.id]
+          const open = editingPrice === l.p.id
+          return (
+            <div key={l.p.id} className="border-b border-divider/10">
+              <div className="flex items-center gap-3 py-2.5">
+                <div className="h-11 w-11 overflow-hidden rounded-xl bg-[#20262b]">
+                  {l.p.image && <img src={l.p.image} alt={l.p.name} className="h-full w-full object-cover" />}
+                </div>
+                <button onClick={() => openPriceEditor(l.p)} className="min-w-0 text-left">
+                  <div className="truncate text-sm">{l.p.name}</div>
+                  <div className="text-xs">
+                    {ov && ov.price !== l.p.price ? (
+                      <>
+                        <span className="text-pewter line-through">{baht(l.p.price)}</span>{' '}
+                        <span className="font-semibold text-[#e08cb8]">{ov.price === 0 ? 'ฟรี' : baht(ov.price)}</span>
+                      </>
+                    ) : (
+                      <span className="text-pewter">{baht(l.p.price)}</span>
+                    )}
+                    {ov?.note && <span className="text-[#e08cb8]"> · {ov.note}</span>}
+                    <span className={`ml-1.5 ${open ? 'text-electrum' : 'text-pewter/60'}`}>แก้ราคา</span>
+                  </div>
+                </button>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <button onClick={() => decCart(l.p.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum">
+                    <IconMinus width={16} height={16} />
+                  </button>
+                  <span className="w-6 text-center font-num text-base font-semibold">{l.qty}</span>
+                  <button
+                    onClick={() => {
+                      if (l.qty >= l.p.stock) return showToast('สต็อกไม่พอ')
+                      addToCart(l.p.id)
+                    }}
+                    disabled={l.qty >= l.p.stock}
+                    className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum disabled:opacity-40"
+                  >
+                    <IconPlus width={16} height={16} />
+                  </button>
+                  <button onClick={() => removeCart(l.p.id)} className="ml-1 grid h-7 w-7 place-items-center rounded-lg text-pewter">
+                    <IconTrash width={16} height={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* price override editor */}
+              {open && (
+                <div className="mb-2.5 rounded-2xl border border-divider/10 bg-surface p-3.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[12px] text-pewter">ราคาพิเศษ/ชิ้น</span>
+                    <div className="ml-auto flex items-center overflow-hidden rounded-xl border border-divider/20 bg-black/20">
+                      <span className="pl-2.5 font-num text-sm font-semibold text-electrum">฿</span>
+                      <input
+                        inputMode="numeric"
+                        value={ovRaw}
+                        onChange={(e) => setOverridePrice(l.p, e.target.value.replace(/[^0-9]/g, ''))}
+                        className="w-[74px] bg-transparent px-2 py-2 text-right font-num text-base font-semibold text-milky outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {PRICE_NOTES.map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => toggleOverrideNote(l.p, n)}
+                        className={`rounded-full border px-3 py-1.5 text-[12px] ${
+                          ov?.note === n ? 'border-electrum bg-surface-2 text-electrum' : 'border-divider/10 text-pewter'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => clearOverride(l.p)}
+                      className="ml-auto rounded-full border border-divider/20 px-3 py-1.5 text-[12px] text-pewter"
+                    >
+                      คืนราคาเดิม
+                    </button>
+                    <button
+                      onClick={() => setEditingPrice(null)}
+                      className="rounded-full bg-electrum px-3.5 py-1.5 text-[12px] font-semibold text-accent-on"
+                    >
+                      เสร็จ
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="min-w-0">
-              <div className="truncate text-sm">{l.p.name}</div>
-              <div className="text-xs text-pewter">{baht(l.p.price)}</div>
-            </div>
-            <div className="ml-auto flex items-center gap-1.5">
-              <button onClick={() => decCart(l.p.id)} className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum">
-                <IconMinus width={16} height={16} />
-              </button>
-              <span className="w-6 text-center font-num text-base font-semibold">{l.qty}</span>
-              <button
-                onClick={() => {
-                  if (l.qty >= l.p.stock) return showToast('สต็อกไม่พอ')
-                  addToCart(l.p.id)
-                }}
-                disabled={l.qty >= l.p.stock}
-                className="grid h-7 w-7 place-items-center rounded-lg border border-divider/10 text-electrum disabled:opacity-40"
-              >
-                <IconPlus width={16} height={16} />
-              </button>
-              <button onClick={() => removeCart(l.p.id)} className="ml-1 grid h-7 w-7 place-items-center rounded-lg text-pewter">
-                <IconTrash width={16} height={16} />
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* set lines */}
         {setLines.map((l) => {

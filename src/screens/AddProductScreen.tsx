@@ -3,11 +3,14 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, uid, getSetting } from '../db'
 import { useApp } from '../store'
 import { fileToDataURL } from '../lib/image'
+import { addLot, adjustLotQty, updateLotCost, updateLotNote, deleteLot } from '../lib/lots'
 import { CropModal } from '../components/CropModal'
 import { ScreenHeader } from '../components/ScreenHeader'
 import { IconCamera, IconCheck, IconPlus, IconMinus, IconTrash } from '../components/Icons'
 
 const numeric = (v: string) => v.replace(/[^0-9]/g, '')
+// ต้นทุนใส่ทศนิยมได้ (เช่น 32.5)
+const decimal = (v: string) => v.replace(/[^0-9.]/g, '')
 
 export function AddProductScreen() {
   const go = useApp((s) => s.go)
@@ -27,6 +30,7 @@ export function AddProductScreen() {
 
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
+  const [cost, setCost] = useState('') // ต้นทุน/ชิ้น — ใช้สร้าง lot แรกตอนเพิ่มสินค้าใหม่
   const [stock, setStock] = useState('20')
   const [image, setImage] = useState<string | undefined>()
   const [cropSrc, setCropSrc] = useState<string | null>(null)
@@ -97,18 +101,28 @@ export function AddProductScreen() {
     }
 
     if (isEdit && editId) {
+      // สต็อกในโหมดแก้ไขจัดการผ่าน LOT (รับของเข้า/แก้ lot) — ไม่แตะ stock ตรงนี้
       await db.products.update(editId, {
-        name: name.trim(), price: priceN, stock: parseInt(stock) || 0, image, categoryId,
+        name: name.trim(), price: priceN, image, categoryId,
         ownerId: resolvedOwnerId,
       })
       showToast('บันทึกการแก้ไขแล้ว')
     } else {
       const order = await db.products.where('categoryId').equals(categoryId).count()
+      const productId = uid()
+      const stockN = parseInt(stock) || 0
       await db.products.add({
-        id: uid(), categoryId, name: name.trim(), price: priceN,
-        stock: parseInt(stock) || 0, image, active: true, order,
+        id: productId, categoryId, name: name.trim(), price: priceN,
+        stock: stockN, image, active: true, order,
         ownerId: resolvedOwnerId,
       })
+      // สต็อกเริ่มต้น = lot แรก (เก็บต้นทุน/ชิ้นไว้คิดกำไร)
+      if (stockN > 0) {
+        await db.lots.add({
+          id: uid(), productId, qtyIn: stockN, qtyLeft: stockN,
+          cost: parseFloat(cost) || 0, note: 'สต็อกเริ่มต้น', createdAt: Date.now(),
+        })
+      }
       showToast('เพิ่มสินค้าแล้ว')
     }
     go('products')
@@ -117,7 +131,10 @@ export function AddProductScreen() {
   async function remove() {
     if (!editId) return
     if (!window.confirm(`ลบสินค้า "${name}" ?`)) return
-    await db.products.delete(editId)
+    await db.transaction('rw', db.products, db.lots, async () => {
+      await db.products.delete(editId)
+      await db.lots.where('productId').equals(editId).delete()
+    })
     showToast('ลบสินค้าแล้ว')
     go('products')
   }
@@ -201,22 +218,45 @@ export function AddProductScreen() {
           </div>
         </Field>
 
-        <Field label="สต็อกเริ่มต้น">
-          <div className="flex w-fit items-center overflow-hidden rounded-[13px] border border-divider/10">
-            <button onClick={() => step(-1)} className="grid h-12 w-12 place-items-center bg-surface text-electrum">
-              <IconMinus width={20} height={20} />
-            </button>
-            <input
-              inputMode="numeric"
-              value={stock}
-              onChange={(e) => setStock(numeric(e.target.value))}
-              className="h-12 w-[70px] bg-surface-2 text-center font-num text-lg font-semibold text-milky outline-none"
-            />
-            <button onClick={() => step(1)} className="grid h-12 w-12 place-items-center bg-surface text-electrum">
-              <IconPlus width={20} height={20} />
-            </button>
-          </div>
-        </Field>
+        {!isEdit && (
+          <Field label="ต้นทุนต่อชิ้น (ไม่บังคับ — ใช้คิดกำไร)">
+            <div className="flex items-center rounded-[13px] border border-divider/10 bg-surface px-3.5 focus-within:border-electrum">
+              <span className="font-num text-lg font-semibold text-pewter">฿</span>
+              <input
+                inputMode="decimal"
+                value={cost}
+                onChange={(e) => setCost(decimal(e.target.value))}
+                placeholder="0"
+                className="flex-1 bg-transparent px-2 py-3 font-num text-lg font-semibold text-milky outline-none"
+              />
+            </div>
+          </Field>
+        )}
+
+        {!isEdit && (
+          <Field label="สต็อกเริ่มต้น">
+            <div className="flex w-fit items-center overflow-hidden rounded-[13px] border border-divider/10">
+              <button onClick={() => step(-1)} className="grid h-12 w-12 place-items-center bg-surface text-electrum">
+                <IconMinus width={20} height={20} />
+              </button>
+              <input
+                inputMode="numeric"
+                value={stock}
+                onChange={(e) => setStock(numeric(e.target.value))}
+                className="h-12 w-[70px] bg-surface-2 text-center font-num text-lg font-semibold text-milky outline-none"
+              />
+              <button onClick={() => step(1)} className="grid h-12 w-12 place-items-center bg-surface text-electrum">
+                <IconPlus width={20} height={20} />
+              </button>
+            </div>
+          </Field>
+        )}
+
+        {isEdit && editId && (
+          <Field label="สต็อก & LOT ต้นทุน">
+            <LotManager productId={editId} />
+          </Field>
+        )}
 
         <Field label="ประเภท">
           <div className="flex flex-wrap gap-2">
@@ -356,6 +396,166 @@ export function AddProductScreen() {
         />
       )}
     </>
+  )
+}
+
+/**
+ * จัดการ LOT ของสินค้า (โหมดแก้ไข): เห็นสต็อกรวม, แก้ lot เก่าได้ทุกอย่าง
+ * (จำนวนคงเหลือ +/-, ต้นทุน, โน้ต, ลบ) และรับของเข้าเป็น lot ใหม่
+ * ทุกการแก้ไข apply ลง db ทันที (ไม่ต้องกดบันทึก)
+ */
+function LotManager({ productId }: { productId: string }) {
+  const showToast = useApp((s) => s.showToast)
+  const lots = useLiveQuery(
+    () => db.lots.where('productId').equals(productId).sortBy('createdAt'),
+    [productId],
+  )
+  const product = useLiveQuery(() => db.products.get(productId), [productId])
+
+  const [adding, setAdding] = useState(false)
+  const [qty, setQty] = useState('')
+  const [lotCost, setLotCost] = useState('')
+  const [note, setNote] = useState('')
+
+  async function submitAdd() {
+    const q = parseInt(qty) || 0
+    if (q <= 0) return showToast('ใส่จำนวนที่รับเข้า')
+    await addLot(productId, q, parseFloat(lotCost) || 0, note)
+    setAdding(false)
+    setQty(''); setLotCost(''); setNote('')
+    showToast('รับของเข้าแล้ว')
+  }
+
+  async function removeLot(lotId: string, qtyLeft: number) {
+    if (!window.confirm(`ลบ lot นี้? สต็อกจะลดลง ${qtyLeft} ชิ้น`)) return
+    await deleteLot(lotId)
+    showToast('ลบ lot แล้ว')
+  }
+
+  return (
+    <div>
+      {/* สต็อกรวม */}
+      <div className="mb-3 flex items-baseline gap-2 rounded-[13px] border border-divider/10 bg-surface px-3.5 py-3">
+        <span className="text-[12px] text-pewter">สต็อกรวม</span>
+        <span className="font-num text-lg font-semibold text-milky">{product?.stock ?? 0}</span>
+        <span className="text-[12px] text-pewter">ชิ้น</span>
+      </div>
+
+      {/* รายการ lot */}
+      {(lots ?? []).length === 0 && (
+        <div className="mb-3 rounded-[13px] border border-dashed border-divider/20 px-3.5 py-3 text-[12px] text-pewter">
+          ยังไม่มี lot — กด "รับของเข้า" เพื่อบันทึกจำนวน + ต้นทุน
+        </div>
+      )}
+      {(lots ?? []).map((lot) => (
+        <div key={lot.id} className="mb-2 rounded-2xl border border-divider/10 bg-surface p-3">
+          <div className="flex items-center gap-2">
+            <input
+              defaultValue={lot.note ?? ''}
+              placeholder="โน้ต เช่น พิมพ์ครั้งที่ 2"
+              onBlur={(e) => void updateLotNote(lot.id, e.target.value)}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-milky outline-none placeholder:text-pewter/60"
+            />
+            <span className="flex-none text-[10px] text-pewter">
+              {new Date(lot.createdAt).toLocaleDateString('th-TH')}
+            </span>
+            <button
+              onClick={() => void removeLot(lot.id, lot.qtyLeft)}
+              className="grid h-7 w-7 flex-none place-items-center rounded-lg text-pewter"
+            >
+              <IconTrash width={15} height={15} />
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center overflow-hidden rounded-xl border border-divider/20 bg-black/20">
+              <span className="pl-2 font-num text-[13px] font-semibold text-pewter">฿</span>
+              <input
+                inputMode="decimal"
+                defaultValue={lot.cost > 0 ? String(lot.cost) : ''}
+                placeholder="0"
+                onBlur={(e) => void updateLotCost(lot.id, parseFloat(decimal(e.target.value)) || 0)}
+                className="w-[68px] bg-transparent px-1.5 py-1.5 text-right font-num text-[14px] font-semibold text-milky outline-none placeholder:text-pewter/60"
+              />
+            </div>
+            <span className="text-[11px] text-pewter">ทุน/ชิ้น</span>
+            <div className="ml-auto flex items-center gap-1">
+              <button
+                onClick={() => void adjustLotQty(lot.id, -1)}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-divider/10 text-electrum"
+              >
+                <IconMinus width={15} height={15} />
+              </button>
+              <div className="w-[46px] text-center">
+                <div className="font-num text-[15px] font-semibold leading-none text-milky">{lot.qtyLeft}</div>
+                <div className="mt-0.5 font-num text-[9px] leading-none text-pewter">รับ {lot.qtyIn}</div>
+              </div>
+              <button
+                onClick={() => void adjustLotQty(lot.id, 1)}
+                className="grid h-8 w-8 place-items-center rounded-lg border border-divider/10 text-electrum"
+              >
+                <IconPlus width={15} height={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* รับของเข้า */}
+      {adding ? (
+        <div className="rounded-2xl border border-electrum/30 bg-surface p-3.5">
+          <div className="mb-2 text-[12px] font-medium text-electrum">รับของเข้า (LOT ใหม่)</div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="mb-1 block text-[10px] text-pewter">จำนวน</label>
+              <input
+                inputMode="numeric"
+                value={qty}
+                onChange={(e) => setQty(numeric(e.target.value))}
+                placeholder="0"
+                className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3 py-2.5 text-center font-num text-[15px] font-semibold text-milky outline-none focus:border-electrum"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-[10px] text-pewter">ต้นทุน/ชิ้น (฿)</label>
+              <input
+                inputMode="decimal"
+                value={lotCost}
+                onChange={(e) => setLotCost(decimal(e.target.value))}
+                placeholder="0"
+                className="w-full rounded-xl border border-divider/10 bg-surface-2 px-3 py-2.5 text-center font-num text-[15px] font-semibold text-milky outline-none focus:border-electrum"
+              />
+            </div>
+          </div>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="โน้ต (ไม่บังคับ) เช่น พิมพ์ครั้งที่ 2, เล่มตำหนิ"
+            className="mt-2 w-full rounded-xl border border-divider/10 bg-surface-2 px-3 py-2.5 text-[13px] text-milky outline-none focus:border-electrum"
+          />
+          <div className="mt-2.5 flex gap-2">
+            <button
+              onClick={() => setAdding(false)}
+              className="rounded-xl border border-divider/20 px-3.5 py-2 text-[13px] text-pewter"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={() => void submitAdd()}
+              className="flex-1 rounded-xl bg-electrum py-2 text-[13px] font-bold text-accent-on"
+            >
+              เพิ่ม lot นี้
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="w-full rounded-[13px] border border-dashed border-divider/20 py-3 text-[13px] font-medium text-electrum"
+        >
+          ＋ รับของเข้า (เพิ่ม LOT)
+        </button>
+      )}
+    </div>
   )
 }
 

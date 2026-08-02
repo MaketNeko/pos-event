@@ -14,7 +14,7 @@ const AUTO_INTERVAL = 12 * 60 * 60 * 1000
 
 /** รวมข้อมูลทุกตารางเป็นก้อนเดียว (ใช้ทั้ง export ไฟล์ และสแนปช็อตในเครื่อง) */
 export async function collectData(): Promise<SnapshotData> {
-  const [categories, products, events, sales, settings, sets, owners] = await Promise.all([
+  const [categories, products, events, sales, settings, sets, owners, lots] = await Promise.all([
     db.categories.toArray(),
     db.products.toArray(),
     db.events.toArray(),
@@ -22,8 +22,9 @@ export async function collectData(): Promise<SnapshotData> {
     db.settings.toArray(),
     db.sets.toArray(),
     db.owners.toArray(),
+    db.lots.toArray(),
   ])
-  return { categories, products, events, sales, settings, sets, owners }
+  return { categories, products, events, sales, settings, sets, owners, lots }
 }
 
 /**
@@ -33,11 +34,12 @@ export async function collectData(): Promise<SnapshotData> {
 export async function applyData(data: Partial<SnapshotData>) {
   await db.transaction(
     'rw',
-    [db.categories, db.products, db.events, db.sales, db.settings, db.sets, db.owners],
+    [db.categories, db.products, db.events, db.sales, db.settings, db.sets, db.owners, db.lots],
     async () => {
       await Promise.all([
         db.categories.clear(), db.products.clear(), db.events.clear(),
         db.sales.clear(), db.settings.clear(), db.sets.clear(), db.owners.clear(),
+        db.lots.clear(),
       ])
       await db.categories.bulkAdd(data.categories ?? [])
       await db.products.bulkAdd(data.products ?? [])
@@ -46,6 +48,14 @@ export async function applyData(data: Partial<SnapshotData>) {
       await db.settings.bulkAdd(data.settings ?? [])
       await db.sets.bulkAdd(data.sets ?? [])
       await db.owners.bulkAdd(data.owners ?? [])
+      // backup เก่าไม่มี lots — สร้าง "ยอดยกมา" ให้สินค้าที่มีสต็อก เพื่อให้ระบบต้นทุนทำงานต่อได้
+      const lots = data.lots ?? (data.products ?? [])
+        .filter((p) => (p.stock ?? 0) > 0)
+        .map((p, i) => ({
+          id: uid(), productId: p.id, qtyIn: p.stock, qtyLeft: p.stock,
+          cost: 0, note: 'ยอดยกมา', createdAt: Date.now() + i,
+        }))
+      await db.lots.bulkAdd(lots)
     },
   )
 }

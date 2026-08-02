@@ -31,11 +31,12 @@ export function HistoryScreen() {
       showToast('ไม่มีข้อมูลให้ส่งออก')
       return
     }
-    const header = ['วันที่', 'เวลา', 'งาน', 'รายการ', 'จำนวนชิ้น', 'ยอดรวม', 'ส่วนลด', 'ยอดสุทธิ']
+    const header = ['วันที่', 'เวลา', 'งาน', 'รายการ', 'จำนวนชิ้น', 'ยอดรวม', 'ส่วนลด', 'ยอดสุทธิ', 'ต้นทุน', 'กำไร']
     const rows = list.map((s) => {
       const d = new Date(s.createdAt)
       const items = s.items.map((i) => `${i.name} x${i.qty}`).join(' | ')
       const qty = s.items.reduce((a, b) => a + b.qty, 0)
+      const cost = s.items.reduce((a, b) => a + (b.cost ?? 0), 0)
       return [
         d.toLocaleDateString('th-TH'),
         timeOf(s.createdAt),
@@ -45,6 +46,8 @@ export function HistoryScreen() {
         s.subtotal,
         s.discount,
         s.total,
+        cost,
+        s.total - cost,
       ]
     })
     const csv = [header, ...rows]

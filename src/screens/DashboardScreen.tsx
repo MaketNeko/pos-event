@@ -10,14 +10,20 @@ import { IconChevron, IconBack } from '../components/Icons'
 // สีวิธีจ่ายเงิน (data-viz เท่านั้น ไม่ใช่ layout)
 const PAY_COLOR = { promptpay: '#5B8AF0', cash: '#F0A05B' } as const
 
-type Metric = 'revenue' | 'qty'
+type Metric = 'revenue' | 'qty' | 'profit'
 
 interface TopItem {
   id: string
   name: string
   qty: number
   revenue: number
+  profit: number // ยอดขาย − ต้นทุน (บิลเก่าไม่มีข้อมูลต้นทุน = ต้นทุน 0)
 }
+
+const valOf = (i: { qty: number; revenue: number; profit: number }, m: Metric): number =>
+  m === 'revenue' ? i.revenue : m === 'qty' ? i.qty : i.profit
+
+const fmtVal = (v: number, m: Metric): string => (m === 'qty' ? `${v} ชิ้น` : baht(v))
 
 interface DonutSlice {
   color: string
@@ -48,20 +54,20 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function TopList({ items, metric, showAll }: { items: TopItem[]; metric: Metric; showAll: boolean }) {
   const display = showAll ? items : items.slice(0, 5)
-  // items is pre-sorted, so items[0] is the max
-  const maxVal = items.length > 0 ? (metric === 'revenue' ? items[0].revenue : items[0].qty) : 1
+  // items is pre-sorted, so items[0] is the max (กำไรอาจติดลบ — กันหารด้วยค่าลบ)
+  const maxVal = items.length > 0 ? Math.max(0, valOf(items[0], metric)) : 1
 
   return (
     <div className="space-y-3">
       {display.map((item) => {
-        const val = metric === 'revenue' ? item.revenue : item.qty
-        const pct = maxVal > 0 ? (val / maxVal) * 100 : 0
+        const val = valOf(item, metric)
+        const pct = maxVal > 0 ? Math.max(0, (val / maxVal) * 100) : 0
         return (
           <div key={item.id}>
             <div className="mb-1 flex items-baseline justify-between gap-2">
               <span className="min-w-0 flex-1 truncate text-[12px] text-milky">{item.name}</span>
-              <span className="flex-none font-num text-[12px] font-semibold text-electrum">
-                {metric === 'revenue' ? baht(item.revenue) : `${item.qty} ชิ้น`}
+              <span className={`flex-none font-num text-[12px] font-semibold ${metric === 'profit' && val < 0 ? 'text-danger' : 'text-electrum'}`}>
+                {fmtVal(val, metric)}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -69,7 +75,7 @@ function TopList({ items, metric, showAll }: { items: TopItem[]; metric: Metric;
                 <div className="h-full rounded-full bg-electrum transition-all" style={{ width: `${pct}%` }} />
               </div>
               <span className="w-[56px] flex-none text-right font-num text-[10px] text-pewter">
-                {metric === 'revenue' ? `${item.qty} ชิ้น` : baht(item.revenue)}
+                {metric === 'qty' ? baht(item.revenue) : `${item.qty} ชิ้น`}
               </span>
             </div>
           </div>
@@ -90,13 +96,13 @@ function OwnerBreakdown({
   onToggle: (key: string) => void
 }) {
   const display = showAll ? items : items.slice(0, 5)
-  const maxVal = items.length > 0 ? (metric === 'revenue' ? items[0].revenue : items[0].qty) : 1
+  const maxVal = items.length > 0 ? Math.max(0, valOf(items[0], metric)) : 1
 
   return (
     <div className="space-y-2.5">
       {display.map((item) => {
-        const val = metric === 'revenue' ? item.revenue : item.qty
-        const pct = maxVal > 0 ? (val / maxVal) * 100 : 0
+        const val = valOf(item, metric)
+        const pct = maxVal > 0 ? Math.max(0, (val / maxVal) * 100) : 0
         const open = expanded === item.id
         const subs = breakdown[item.id] ?? []
         return (
@@ -109,8 +115,8 @@ function OwnerBreakdown({
                   className={`flex-none translate-y-[1px] text-pewter transition-transform ${open ? 'rotate-180' : ''}`}
                 />
                 <span className="min-w-0 flex-1 truncate text-[12px] text-milky">{item.name}</span>
-                <span className="flex-none font-num text-[12px] font-semibold text-electrum">
-                  {metric === 'revenue' ? baht(item.revenue) : `${item.qty} ชิ้น`}
+                <span className={`flex-none font-num text-[12px] font-semibold ${metric === 'profit' && val < 0 ? 'text-danger' : 'text-electrum'}`}>
+                  {fmtVal(val, metric)}
                 </span>
               </div>
               <div className="flex items-center gap-2 pl-[19px]">
@@ -118,7 +124,7 @@ function OwnerBreakdown({
                   <div className="h-full rounded-full bg-electrum transition-all" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="w-[56px] flex-none text-right font-num text-[10px] text-pewter">
-                  {metric === 'revenue' ? `${item.qty} ชิ้น` : baht(item.revenue)}
+                  {metric === 'qty' ? baht(item.revenue) : `${item.qty} ชิ้น`}
                 </span>
               </div>
             </button>
@@ -131,10 +137,10 @@ function OwnerBreakdown({
                     <div key={s.id} className="flex items-baseline gap-2 py-0.5">
                       <span className="min-w-0 flex-1 truncate text-[11px] text-pewter">{s.name}</span>
                       <span className="flex-none font-num text-[11px] text-milky">
-                        {metric === 'revenue' ? baht(s.revenue) : `${s.qty} ชิ้น`}
+                        {fmtVal(valOf(s, metric), metric)}
                       </span>
                       <span className="w-[52px] flex-none text-right font-num text-[10px] text-pewter">
-                        {metric === 'revenue' ? `${s.qty} ชิ้น` : baht(s.revenue)}
+                        {metric === 'qty' ? baht(s.revenue) : `${s.qty} ชิ้น`}
                       </span>
                     </div>
                   ))
@@ -181,14 +187,18 @@ function PaymentDonut({
   metric: Metric
   total: number
 }) {
-  const ppPct = total > 0 ? (promptpay / total) * 100 : 50
-  const cashPct = total > 0 ? (cash / total) * 100 : 50
+  // กำไรอาจติดลบ — clamp ค่าที่ใช้วาดวงแหวน (ตัวเลขจริงยังแสดงใน legend)
+  const ppDraw = Math.max(0, promptpay)
+  const cashDraw = Math.max(0, cash)
+  const drawTotal = ppDraw + cashDraw
+  const ppPct = drawTotal > 0 ? (ppDraw / drawTotal) * 100 : 50
+  const cashPct = drawTotal > 0 ? (cashDraw / drawTotal) * 100 : 50
   const gradient =
-    total > 0
+    drawTotal > 0
       ? `conic-gradient(${PAY_COLOR.promptpay} 0% ${ppPct.toFixed(2)}%, ${PAY_COLOR.cash} ${ppPct.toFixed(2)}% 100%)`
       : `conic-gradient(rgb(var(--c-divider) / 0.1) 0% 100%)`
 
-  const fmt = (v: number) => (metric === 'revenue' ? baht(v) : `${v} บิล`)
+  const fmt = (v: number) => (metric === 'qty' ? `${v} บิล` : baht(v))
 
   return (
     <>
@@ -248,6 +258,9 @@ export function DashboardScreen() {
   const totalRevenue = filteredSales.reduce((s, x) => s + x.total, 0)
   const billCount = filteredSales.length
   const totalQty = filteredSales.reduce((s, x) => s + x.items.reduce((a, b) => a + b.qty, 0), 0)
+  // ต้นทุนขาย (COGS) จาก item.cost ที่บันทึกตอนตัด lot — บิลเก่าไม่มีข้อมูล = 0
+  const totalCost = filteredSales.reduce((s, x) => s + x.items.reduce((a, b) => a + (b.cost ?? 0), 0), 0)
+  const totalProfit = totalRevenue - totalCost
 
   // ---- map สำหรับ join ----
   const productMap = Object.fromEntries((products ?? []).map((p) => [p.id, p]))
@@ -277,31 +290,29 @@ export function DashboardScreen() {
   for (const sale of filteredSales) {
     for (const item of sale.items) {
       if (item.kind !== 'product' || !inScope(item)) continue
-      if (!productAgg[item.refId]) productAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
+      if (!productAgg[item.refId]) productAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0, profit: 0 }
       productAgg[item.refId].qty += item.qty
       productAgg[item.refId].revenue += item.qty * item.price
+      productAgg[item.refId].profit += item.qty * item.price - (item.cost ?? 0)
     }
   }
-  const productList = Object.values(productAgg).sort(
-    (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
-  )
+  const productList = Object.values(productAgg).sort((a, b) => valOf(b, metric) - valOf(a, metric))
 
   // ---- สรุปเซ็ต (kind === 'set') — ไม่แสดงเมื่อกรองรายเจ้าของ ----
   const setAgg: Record<string, TopItem> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
       if (item.kind !== 'set' || ownerScoped) continue
-      if (!setAgg[item.refId]) setAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
+      if (!setAgg[item.refId]) setAgg[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0, profit: 0 }
       setAgg[item.refId].qty += item.qty
       setAgg[item.refId].revenue += item.qty * item.price
+      setAgg[item.refId].profit += item.qty * item.price - (item.cost ?? 0)
     }
   }
-  const setList = Object.values(setAgg).sort(
-    (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
-  )
+  const setList = Object.values(setAgg).sort((a, b) => valOf(b, metric) - valOf(a, metric))
 
   // ---- สรุปตามประเภท (เฉพาะ kind === 'product') ----
-  type CatEntry = { id: string; name: string; color: string; qty: number; revenue: number }
+  type CatEntry = { id: string; name: string; color: string; qty: number; revenue: number; profit: number }
   const catAgg: Record<string, CatEntry> = {}
   for (const sale of filteredSales) {
     for (const item of sale.items) {
@@ -310,15 +321,15 @@ export function DashboardScreen() {
       if (!prod) continue
       const cat = categoryMap[prod.categoryId]
       if (!cat) continue
-      if (!catAgg[cat.id]) catAgg[cat.id] = { id: cat.id, name: cat.name, color: cat.color, qty: 0, revenue: 0 }
+      if (!catAgg[cat.id]) catAgg[cat.id] = { id: cat.id, name: cat.name, color: cat.color, qty: 0, revenue: 0, profit: 0 }
       catAgg[cat.id].qty += item.qty
       catAgg[cat.id].revenue += item.qty * item.price
+      catAgg[cat.id].profit += item.qty * item.price - (item.cost ?? 0)
     }
   }
-  const catList = Object.values(catAgg).sort(
-    (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
-  )
-  const catTotal = catList.reduce((s, c) => s + (metric === 'revenue' ? c.revenue : c.qty), 0)
+  const catList = Object.values(catAgg).sort((a, b) => valOf(b, metric) - valOf(a, metric))
+  // โดนัทวาดจากค่าบวกเท่านั้น (กำไรติดลบวาดเป็นวงไม่ได้)
+  const catTotal = catList.reduce((s, c) => s + Math.max(0, valOf(c, metric)), 0)
 
   // ---- สรุปตามเจ้าของ + รายสินค้าของแต่ละเจ้าของ (เฉพาะ kind === 'product') ----
   const ownerAgg: Record<string, TopItem> = {}
@@ -327,23 +338,21 @@ export function DashboardScreen() {
     for (const item of sale.items) {
       if (item.kind !== 'product') continue
       const { key, name } = resolveOwner(item)
-      if (!ownerAgg[key]) ownerAgg[key] = { id: key, name, qty: 0, revenue: 0 }
+      if (!ownerAgg[key]) ownerAgg[key] = { id: key, name, qty: 0, revenue: 0, profit: 0 }
       ownerAgg[key].qty += item.qty
       ownerAgg[key].revenue += item.qty * item.price
+      ownerAgg[key].profit += item.qty * item.price - (item.cost ?? 0)
       const bucket = (ownerProdAgg[key] ??= {})
-      if (!bucket[item.refId]) bucket[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0 }
+      if (!bucket[item.refId]) bucket[item.refId] = { id: item.refId, name: item.name, qty: 0, revenue: 0, profit: 0 }
       bucket[item.refId].qty += item.qty
       bucket[item.refId].revenue += item.qty * item.price
+      bucket[item.refId].profit += item.qty * item.price - (item.cost ?? 0)
     }
   }
-  const ownerList = Object.values(ownerAgg).sort(
-    (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
-  )
+  const ownerList = Object.values(ownerAgg).sort((a, b) => valOf(b, metric) - valOf(a, metric))
   const ownerProducts: Record<string, TopItem[]> = {}
   for (const key in ownerProdAgg) {
-    ownerProducts[key] = Object.values(ownerProdAgg[key]).sort(
-      (a, b) => (metric === 'revenue' ? b.revenue - a.revenue : b.qty - a.qty),
-    )
+    ownerProducts[key] = Object.values(ownerProdAgg[key]).sort((a, b) => valOf(b, metric) - valOf(a, metric))
   }
   const ownerName = ownerScoped
     ? (ownerFilter === SHOP_OWNER_KEY ? (shopName || 'ของร้าน') : ownerNameById[ownerFilter] ?? 'เจ้าของ')
@@ -352,6 +361,7 @@ export function DashboardScreen() {
   // ---- KPI แบบเคารพตัวกรองเจ้าของ ----
   let scopedRevenue = 0
   let scopedQty = 0
+  let scopedCost = 0
   const scopedBills = new Set<string>()
   if (ownerScoped) {
     for (const sale of filteredSales) {
@@ -360,6 +370,7 @@ export function DashboardScreen() {
         if (!inScope(item)) continue
         scopedRevenue += item.qty * item.price
         scopedQty += item.qty
+        scopedCost += item.cost ?? 0
         hit = true
       }
       if (hit) scopedBills.add(sale.id)
@@ -369,15 +380,24 @@ export function DashboardScreen() {
   const kpiBills = ownerScoped ? scopedBills.size : billCount
   const kpiQty = ownerScoped ? scopedQty : totalQty
   const kpiAvg = kpiBills > 0 ? kpiRevenue / kpiBills : 0
+  const kpiCost = ownerScoped ? scopedCost : totalCost
+  const kpiProfit = ownerScoped ? scopedRevenue - scopedCost : totalProfit
 
   // ---- วิธีจ่ายเงิน ----
-  const pay = { promptpay: { revenue: 0, bills: 0 }, cash: { revenue: 0, bills: 0 } }
+  const pay = {
+    promptpay: { revenue: 0, bills: 0, profit: 0 },
+    cash: { revenue: 0, bills: 0, profit: 0 },
+  }
   for (const sale of filteredSales) {
+    const saleCost = sale.items.reduce((a, b) => a + (b.cost ?? 0), 0)
     pay[sale.method].revenue += sale.total
     pay[sale.method].bills += 1
+    pay[sale.method].profit += sale.total - saleCost
   }
-  const payPromptpay = metric === 'revenue' ? pay.promptpay.revenue : pay.promptpay.bills
-  const payCash = metric === 'revenue' ? pay.cash.revenue : pay.cash.bills
+  const payOf = (m: 'promptpay' | 'cash') =>
+    metric === 'revenue' ? pay[m].revenue : metric === 'qty' ? pay[m].bills : pay[m].profit
+  const payPromptpay = payOf('promptpay')
+  const payCash = payOf('cash')
   const payTotal = payPromptpay + payCash
 
   return (
@@ -457,6 +477,12 @@ export function DashboardScreen() {
             >
               จำนวนชิ้น
             </button>
+            <button
+              onClick={() => setMetric('profit')}
+              className={`h-[34px] border-l border-divider/10 px-4 text-[13px] font-semibold transition ${metric === 'profit' ? 'bg-electrum text-accent-on' : 'text-pewter'}`}
+            >
+              กำไร
+            </button>
           </div>
         </div>
 
@@ -472,12 +498,17 @@ export function DashboardScreen() {
               </div>
             )}
 
-            {/* 1. KPI cards — 2×2 grid */}
-            <div className="mb-4 grid grid-cols-2 gap-3">
+            {/* 1. KPI cards */}
+            <div className="mb-2 grid grid-cols-2 gap-3">
               <KpiCard label="ยอดสุทธิ" value={baht(kpiRevenue)} highlight />
+              <KpiCard label="กำไร (หักต้นทุน)" value={baht(Math.round(kpiProfit))} highlight />
+              <KpiCard label="ต้นทุนขาย" value={baht(Math.round(kpiCost))} />
               <KpiCard label={ownerScoped ? 'จำนวนบิลที่มีของคนนี้' : 'จำนวนบิล'} value={`${kpiBills} บิล`} />
               <KpiCard label="จำนวนชิ้นรวม" value={`${kpiQty} ชิ้น`} />
               <KpiCard label="ยอดเฉลี่ยต่อบิล" value={baht(Math.round(kpiAvg))} />
+            </div>
+            <div className="mb-4 px-1 text-[10px] text-pewter">
+              * กำไรคิดจากต้นทุน LOT ที่บันทึกไว้ — บิลที่ขายก่อนมีระบบต้นทุนจะนับต้นทุนเป็น 0
             </div>
 
             {/* 2. สินค้าเดี่ยวขายดี */}
@@ -533,14 +564,14 @@ export function DashboardScreen() {
                   <DonutChart
                     slices={catList.map((c) => ({
                       color: c.color,
-                      value: metric === 'revenue' ? c.revenue : c.qty,
+                      value: Math.max(0, valOf(c, metric)),
                     }))}
                     total={catTotal}
                   />
                   <div className="mt-3 space-y-1.5">
                     {catList.map((c) => {
-                      const val = metric === 'revenue' ? c.revenue : c.qty
-                      const pct = catTotal > 0 ? Math.round((val / catTotal) * 100) : 0
+                      const val = valOf(c, metric)
+                      const pct = catTotal > 0 ? Math.round((Math.max(0, val) / catTotal) * 100) : 0
                       return (
                         <div key={c.id} className="flex items-center gap-2">
                           <div
@@ -548,8 +579,8 @@ export function DashboardScreen() {
                             style={{ background: c.color }}
                           />
                           <span className="min-w-0 flex-1 truncate text-[12px] text-milky">{c.name}</span>
-                          <span className="font-num text-[12px] text-pewter">
-                            {metric === 'revenue' ? baht(c.revenue) : `${c.qty} ชิ้น`}
+                          <span className={`font-num text-[12px] ${metric === 'profit' && val < 0 ? 'text-danger' : 'text-pewter'}`}>
+                            {fmtVal(val, metric)}
                           </span>
                           <span className="w-[34px] flex-none text-right font-num text-[11px] text-pewter">
                             {pct}%

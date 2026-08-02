@@ -8,6 +8,7 @@ import { enqueueSale } from '../sync/outbox'
 import { baht, thaiDate } from '../lib/format'
 import { promptPayPayload } from '../lib/promptpay'
 import { computeMix, setAvailable } from '../lib/sets'
+import { consumeFIFO } from '../lib/lots'
 import {
   IconChart,
   IconGear,
@@ -21,7 +22,7 @@ import {
   IconClock,
 } from '../components/Icons'
 import { ShopAvatar } from '../components/ShopAvatar'
-import type { SaleItem, Product, ProductSet } from '../types'
+import type { Sale, SaleItem, Product, ProductSet } from '../types'
 
 type Line = { p: Product; qty: number }
 type SetLine = { s: ProductSet; qty: number }
@@ -137,35 +138,9 @@ export function PosScreen() {
       ...setLines.map((l) => ({ kind: 'set' as const, refId: l.s.id, name: l.s.name, price: l.s.price, qty: l.qty })),
     ]
 
-    if (boothRole === 'off') {
-      // ── Offline / non-booth path — UNCHANGED ─────────────────────────
-      await db.transaction('rw', db.products, db.sales, async () => {
-        for (const l of lines) {
-          const cur = await db.products.get(l.p.id)
-          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
-        }
-        for (const l of setLines) {
-          for (const c of l.s.items ?? []) {
-            const cur = await db.products.get(c.productId)
-            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
-          }
-        }
-        await db.sales.add({
-          id: uid(),
-          eventId: currentEventId,
-          eventName: event?.name ?? '',
-          items,
-          subtotal: total,
-          setDiscount: mix.discount,
-          discount: wideDiscount,
-          total: wideTotal,
-          method,
-          createdAt: Date.now(),
-        })
-      })
-    } else if (boothRole === 'master') {
-      // ── Master path: local write + push to room for helpers to see ────
-      const sale = {
+    if (boothRole === 'off' || boothRole === 'master') {
+      // ── Local path (offline + master): ตัดสต็อก + ตัด lot FIFO เก็บต้นทุนลงบิล ──
+      const sale: Sale = {
         id: uid(),
         eventId: currentEventId,
         eventName: event?.name ?? '',
@@ -177,21 +152,27 @@ export function PosScreen() {
         method,
         createdAt: Date.now(),
       }
-      await db.transaction('rw', db.products, db.sales, async () => {
-        for (const l of lines) {
-          const cur = await db.products.get(l.p.id)
-          if (cur) await db.products.update(l.p.id, { stock: Math.max(0, cur.stock - l.qty) })
-        }
-        for (const l of setLines) {
-          for (const c of l.s.items ?? []) {
-            const cur = await db.products.get(c.productId)
-            if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * l.qty) })
+      await db.transaction('rw', db.products, db.lots, db.sales, async () => {
+        for (const item of sale.items) {
+          if (item.kind === 'product') {
+            const cur = await db.products.get(item.refId)
+            if (cur) await db.products.update(item.refId, { stock: Math.max(0, cur.stock - item.qty) })
+            item.cost = await consumeFIFO(item.refId, item.qty)
+          } else {
+            const st = sets.find((x) => x.id === item.refId)
+            let cogs = 0
+            for (const c of st?.items ?? []) {
+              const cur = await db.products.get(c.productId)
+              if (cur) await db.products.update(c.productId, { stock: Math.max(0, cur.stock - c.qty * item.qty) })
+              cogs += await consumeFIFO(c.productId, c.qty * item.qty)
+            }
+            item.cost = cogs
           }
         }
         await db.sales.add(sale)
       })
       // Enqueue for push — the sales subscription will put() it back (harmless, idempotent)
-      await enqueueSale(boothCode, sale)
+      if (boothRole === 'master') await enqueueSale(boothCode, sale)
     } else {
       // ── Helper path: NO local db writes; outbox only ──────────────────
       // Use eventId/eventName from the master's remoteCatalog snapshot.
