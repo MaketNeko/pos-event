@@ -25,6 +25,8 @@ export function HistoryScreen() {
 
   const list = (sales ?? []).filter((s) => filter === 'all' || s.eventId === filter)
   const total = list.reduce((s, x) => s + x.total, 0)
+  const totalCost = list.reduce((s, x) => s + x.items.reduce((a, b) => a + (b.cost ?? 0), 0), 0)
+  const totalProfit = total - totalCost
 
   function exportCSV() {
     if (list.length === 0) {
@@ -114,14 +116,24 @@ export function HistoryScreen() {
         </div>
 
         {/* summary */}
-        <div className="flex gap-3">
-          <div className="flex-1 rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
             <div className="text-[11px] text-pewter">
               ยอดขาย{filter === 'all' ? 'รวมทุกงาน' : ''}
             </div>
             <div className="mt-1 font-num text-[23px] font-semibold text-electrum">{baht(total)}</div>
           </div>
-          <div className="flex-1 rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
+          <div className="rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
+            <div className="text-[11px] text-pewter">กำไร (หักต้นทุน)</div>
+            <div className={`mt-1 font-num text-[23px] font-semibold ${totalProfit < 0 ? 'text-danger' : 'text-electrum'}`}>
+              {baht(totalProfit)}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
+            <div className="text-[11px] text-pewter">ต้นทุนขาย</div>
+            <div className="mt-1 font-num text-[23px] font-semibold text-milky">{baht(totalCost)}</div>
+          </div>
+          <div className="rounded-2xl border border-divider/10 bg-surface-2 p-3.5">
             <div className="text-[11px] text-pewter">จำนวนบิล</div>
             <div className="mt-1 font-num text-[23px] font-semibold text-milky">
               {list.length} <span className="text-xs text-pewter">บิล</span>

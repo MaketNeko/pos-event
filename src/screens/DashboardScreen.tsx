@@ -234,6 +234,7 @@ function PaymentDonut({
 
 export function DashboardScreen() {
   const go = useApp((s) => s.go)
+  const showToast = useApp((s) => s.showToast)
   const currentEventId = useApp((s) => s.currentEventId)
   const [filter, setFilter] = useState<string>(currentEventId || 'all')
   const [metric, setMetric] = useState<Metric>('revenue')
@@ -261,6 +262,39 @@ export function DashboardScreen() {
   // ต้นทุนขาย (COGS) จาก item.cost ที่บันทึกตอนตัด lot — บิลเก่าไม่มีข้อมูล = 0
   const totalCost = filteredSales.reduce((s, x) => s + x.items.reduce((a, b) => a + (b.cost ?? 0), 0), 0)
   const totalProfit = totalRevenue - totalCost
+
+  // ---- คิดต้นทุนย้อนหลังให้บิลเก่า (ที่ขายก่อนมีระบบต้นทุน) ----
+  // นับเฉพาะบิลที่มีรายการซึ่งไม่เคยถูกคิดต้นทุน (cost === undefined ไม่ใช่ 0)
+  const missingBills = filteredSales.filter((s) => s.items.some((i) => i.cost === undefined))
+
+  /**
+   * เติม item.cost ให้บิลเก่าในงานที่เลือก โดยใช้ "ต้นทุนตัวแทน" ของสินค้า
+   * = ต้นทุนของ lot ล่าสุดที่มีต้นทุน > 0 (ของเก่าขายไปแล้ว ไม่ตัด lot ซ้ำ
+   * เพราะสต็อกตอน migrate เป็นยอดหลังขายอยู่แล้ว)
+   */
+  async function backfillCosts() {
+    if (missingBills.length === 0) return
+    if (!window.confirm(
+      `คิดต้นทุนย้อนหลังให้ ${missingBills.length} บิลในงานนี้ โดยใช้ต้นทุน lot ปัจจุบันของแต่ละสินค้า?\n(ใส่ต้นทุนใน lot ให้ครบก่อนกดนะ)`,
+    )) return
+    const [allLots, allSets] = await Promise.all([db.lots.toArray(), db.sets.toArray()])
+    const rep: Record<string, number> = {}
+    for (const lot of allLots.sort((a, b) => a.createdAt - b.createdAt)) {
+      if (lot.cost > 0 || rep[lot.productId] === undefined) rep[lot.productId] = lot.cost
+    }
+    const setMap = Object.fromEntries(allSets.map((s) => [s.id, s]))
+    const updated = missingBills.map((s) => ({
+      ...s,
+      items: s.items.map((i) => {
+        if (i.cost !== undefined) return i
+        if (i.kind === 'product') return { ...i, cost: i.qty * (rep[i.refId] ?? 0) }
+        const unit = (setMap[i.refId]?.items ?? []).reduce((a, c) => a + c.qty * (rep[c.productId] ?? 0), 0)
+        return { ...i, cost: i.qty * unit }
+      }),
+    }))
+    await db.sales.bulkPut(updated)
+    showToast(`ใส่ต้นทุนย้อนหลังให้ ${updated.length} บิลแล้ว`)
+  }
 
   // ---- map สำหรับ join ----
   const productMap = Object.fromEntries((products ?? []).map((p) => [p.id, p]))
@@ -510,6 +544,16 @@ export function DashboardScreen() {
             <div className="mb-4 px-1 text-[10px] text-pewter">
               * กำไรคิดจากต้นทุน LOT ที่บันทึกไว้ — บิลที่ขายก่อนมีระบบต้นทุนจะนับต้นทุนเป็น 0
             </div>
+
+            {/* คิดต้นทุนย้อนหลัง — โผล่เฉพาะเมื่อเลือกงานแล้วมีบิลเก่าที่ยังไม่มีต้นทุน */}
+            {filter !== 'all' && missingBills.length > 0 && (
+              <button
+                onClick={() => void backfillCosts()}
+                className="mb-4 w-full rounded-[13px] border border-electrum/30 bg-electrum/10 py-2.5 text-[12px] font-medium text-electrum"
+              >
+                คิดต้นทุนย้อนหลังให้บิลเก่าในงานนี้ ({missingBills.length} บิล)
+              </button>
+            )}
 
             {/* 2. สินค้าเดี่ยวขายดี */}
             <Section title="สินค้าเดี่ยวขายดี">
