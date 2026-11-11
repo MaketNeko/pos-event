@@ -4,6 +4,7 @@ import type { SaleItem } from '../types'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
 import { baht } from '../lib/format'
+import { SHOP_OWNER_KEY, makeOwnerResolver } from '../lib/owner'
 import { ShopAvatar } from '../components/ShopAvatar'
 import { IconChevron, IconBack } from '../components/Icons'
 
@@ -302,18 +303,8 @@ export function DashboardScreen() {
 
   // ---- ตัวช่วยหาเจ้าของของ item ----
   // ใช้ snapshot ในบิลก่อน; ถ้าบิลไม่มี (ขายก่อนตั้งเจ้าของ) fallback ไปดูเจ้าของปัจจุบันของสินค้า
-  const SHOP_OWNER_KEY = '__shop__'
-  const prodOwnerById = new Map((products ?? []).map((p) => [p.id, p.ownerId]))
   const ownerNameById = Object.fromEntries((owners ?? []).map((o) => [o.id, o.name]))
-  function resolveOwner(item: SaleItem): { key: string; name: string } {
-    let ownerId = item.ownerId
-    let ownerName = item.ownerName
-    if (!ownerId) {
-      const cur = prodOwnerById.get(item.refId)
-      if (cur) { ownerId = cur; ownerName = ownerNameById[cur] }
-    }
-    return { key: ownerId ?? SHOP_OWNER_KEY, name: ownerName ?? (shopName || 'ของร้าน') }
-  }
+  const resolveOwner = makeOwnerResolver(products ?? [], owners ?? [], shopName ?? '')
   // กรองทั้งหน้าเหลือเฉพาะเจ้าของที่เลือก (เฉพาะสินค้าเดี่ยว; เซ็ตไม่มีเจ้าของ)
   const ownerScoped = ownerFilter !== 'all'
   const inScope = (item: SaleItem) =>

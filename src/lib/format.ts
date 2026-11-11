@@ -13,8 +13,11 @@ export function thaiDate(iso: string): string {
   return `${d} ${months[m - 1]} ${y + 543}`
 }
 
-export const todayISO = (): string => {
-  const d = new Date()
+/** yyyy-mm-dd ตามเวลาเครื่อง (ไม่ใช่ UTC) */
+export const isoOf = (ms: number): string => {
+  const d = new Date(ms)
   const p = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
+
+export const todayISO = (): string => isoOf(Date.now())

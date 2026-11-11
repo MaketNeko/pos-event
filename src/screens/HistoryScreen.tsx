@@ -2,10 +2,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, getSetting } from '../db'
 import { useApp } from '../store'
-import { baht, timeOf } from '../lib/format'
+import { baht, timeOf, todayISO } from '../lib/format'
 import { ReceiptModal } from '../components/ReceiptModal'
 import { ShopAvatar } from '../components/ShopAvatar'
-import { IconDownload, IconChevron, IconCheck, IconBack } from '../components/Icons'
+import { IconDownload, IconChevron, IconCheck, IconBack, IconX } from '../components/Icons'
+import { BILL_HEADER, ITEM_HEADER, billRows, itemRows, downloadCSV } from '../lib/csv'
 import type { Sale } from '../types'
 
 export function HistoryScreen() {
@@ -14,6 +15,7 @@ export function HistoryScreen() {
   const showToast = useApp((s) => s.showToast)
   const [filter, setFilter] = useState<string>(currentEventId || 'all')
   const [selected, setSelected] = useState<Sale | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
 
   const events = useLiveQuery(() => db.events.orderBy('createdAt').toArray(), [])
   const shopName = useLiveQuery(() => getSetting('shopName'), [])
@@ -28,44 +30,30 @@ export function HistoryScreen() {
   const totalCost = list.reduce((s, x) => s + x.items.reduce((a, b) => a + (b.cost ?? 0), 0), 0)
   const totalProfit = total - totalCost
 
-  function exportCSV() {
+  // งานถูกลบไปแล้ว → ใช้ชื่องานที่ snapshot ไว้ในบิล
+  const filterName =
+    filter === 'all' ? 'ทุกงาน' : events?.find((e) => e.id === filter)?.name ?? list[0]?.eventName ?? 'งาน'
+
+  async function exportCSV(mode: 'bill' | 'item') {
+    setExportOpen(false)
     if (list.length === 0) {
       showToast('ไม่มีข้อมูลให้ส่งออก')
       return
     }
-    const header = ['วันที่', 'เวลา', 'งาน', 'รายการ', 'จำนวนชิ้น', 'ยอดรวม', 'ส่วนลด', 'ยอดสุทธิ', 'ต้นทุน', 'กำไร']
-    const rows = list.map((s) => {
-      const d = new Date(s.createdAt)
-      const items = s.items.map((i) => `${i.name} x${i.qty}`).join(' | ')
-      const qty = s.items.reduce((a, b) => a + b.qty, 0)
-      const cost = s.items.reduce((a, b) => a + (b.cost ?? 0), 0)
-      return [
-        d.toLocaleDateString('th-TH'),
-        timeOf(s.createdAt),
-        s.eventName,
-        items,
-        qty,
-        s.subtotal,
-        s.discount,
-        s.total,
-        cost,
-        s.total - cost,
-      ]
-    })
-    const csv = [header, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `ยอดขาย-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const chrono = [...list].reverse() // เรียงเก่า→ใหม่ ให้อ่านในตารางง่าย
+    const scope = filterName.replace(/[\\/:*?"<>|]/g, '-')
+    const name = `ยอดขาย-${mode === 'bill' ? 'รายบิล' : 'รายรายการ'}-${scope}-${todayISO()}.csv`
+    if (mode === 'bill') {
+      downloadCSV(name, BILL_HEADER, billRows(chrono))
+    } else {
+      // โหลดเฉพาะตอนส่งออก — ไม่ต้องค้างตารางสินค้า (มีรูป) ไว้ตลอดเวลาที่เปิดหน้านี้
+      const [products, owners, categories, sets] = await Promise.all([
+        db.products.toArray(), db.owners.toArray(), db.categories.toArray(), db.sets.toArray(),
+      ])
+      downloadCSV(name, ITEM_HEADER, itemRows(chrono, { products, owners, categories, sets, shopName: shopName ?? '' }))
+    }
     showToast('ส่งออกไฟล์แล้ว')
   }
-
-  const filterName = filter === 'all' ? 'ทุกงาน' : events?.find((e) => e.id === filter)?.name ?? ''
 
   return (
     <>
@@ -84,7 +72,7 @@ export function HistoryScreen() {
           <div className="text-[11px] text-pewter">ประวัติการขาย</div>
         </div>
         <button
-          onClick={exportCSV}
+          onClick={() => setExportOpen(true)}
           className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-divider/10 bg-surface text-pewter"
         >
           <IconDownload width={19} height={19} />
@@ -154,7 +142,83 @@ export function HistoryScreen() {
       </div>
 
       {selected && <ReceiptModal sale={selected} onClose={() => setSelected(null)} />}
+      {exportOpen && (
+        <ExportSheet
+          count={list.length}
+          scope={filterName}
+          onPick={exportCSV}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
     </>
+  )
+}
+
+function ExportSheet({
+  count,
+  scope,
+  onPick,
+  onClose,
+}: {
+  count: number
+  scope: string
+  onPick: (mode: 'bill' | 'item') => void
+  onClose: () => void
+}) {
+  return (
+    <div className="absolute inset-0 z-[90] flex flex-col justify-end bg-black/60" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-t-3xl border-t border-divider/15 bg-surface pb-safe"
+      >
+        <div className="relative flex items-center justify-center pb-1 pt-3">
+          <span className="h-1 w-10 rounded-full bg-white/20" />
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-2.5 grid h-8 w-8 place-items-center rounded-lg text-pewter"
+          >
+            <IconX width={18} height={18} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-6 pt-2">
+          <div className="font-serif text-[17px] font-semibold text-milky">ส่งออกไฟล์ CSV</div>
+          <div className="mt-0.5 text-[12px] text-pewter">
+            {scope} · {count} บิล
+          </div>
+
+          <div className="mt-4 space-y-2.5">
+            <ExportOption
+              title="แบบรายบิล"
+              desc="1 แถว = 1 บิล พร้อมยอดรวม ส่วนลด ต้นทุน กำไร — ไว้ดูสรุปยอดขาย"
+              onClick={() => onPick('bill')}
+            />
+            <ExportOption
+              title="แบบรายรายการ"
+              desc="1 แถว = สินค้า 1 รายการ แยกหมวดหมู่ เจ้าของ ราคาพิเศษ และเฉลี่ยส่วนลดท้ายบิลให้แล้ว — ไว้ทำ pivot วิเคราะห์"
+              onClick={() => onPick('item')}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ExportOption({ title, desc, onClick }: { title: string; desc: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-2xl border border-divider/10 bg-surface-2 px-4 py-3.5 text-left transition active:scale-[0.99] hover:border-divider/20"
+    >
+      <span className="grid h-10 w-10 flex-none place-items-center rounded-xl border border-divider/10 bg-surface text-electrum">
+        <IconDownload width={18} height={18} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[14px] font-semibold text-milky">{title}</span>
+        <span className="mt-0.5 block text-[11px] leading-snug text-pewter">{desc}</span>
+      </span>
+    </button>
   )
 }
 
